@@ -20,7 +20,7 @@ class ApplicationsTable extends Table
             array('targetForeignKey' => 'device_id',
                 'foreignKey' => 'application_id',
                 'joinTable' => 'applications_relationship'));
-        $this->hasOne('Status', array('foreignKey' => 'status_id'));
+        $this->belongsTo('Status', array('foreignKey' => 'status_id'));
     }
 
 }

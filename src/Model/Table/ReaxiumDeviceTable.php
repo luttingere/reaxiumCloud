@@ -22,11 +22,11 @@ class ReaxiumDeviceTable extends Table
         parent::initialize($config);
         $this->table('reaxium_device');
         $this->primaryKey('device_id');
-        $this->belongsTo('Applications',
+        $this->belongsToMany('Applications',
             array('targetForeignKey' => 'application_id',
                 'foreignKey' => 'device_id',
                 'joinTable' => 'applications_relationship'));
-        $this->hasOne('Status', array('foreignKey' => 'status_id'));
+        $this->belongsTo('Status', array('foreignKey' => 'status_id'));
     }
 
 

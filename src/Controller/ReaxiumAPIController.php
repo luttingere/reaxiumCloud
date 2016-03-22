@@ -63,8 +63,8 @@ class ReaxiumAPIController extends AppController
     }
 
     public function setInternalServiceError($reaxiumMessage){
-        $reaxiumMessage['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_PARAMETERS_CODE;
-        $reaxiumMessage['ReaxiumResponse']['message'] = ReaxiumApiMessages::$INVALID_PARAMETERS_MESSAGE;
+        $reaxiumMessage['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INTERNAL_SERVER_ERROR_CODE;
+        $reaxiumMessage['ReaxiumResponse']['message'] = ReaxiumApiMessages::$INTERNAL_SERVER_ERROR_MESSAGE;
         return $reaxiumMessage;
     }
 
@@ -74,9 +74,33 @@ class ReaxiumAPIController extends AppController
         return $reaxiumMessage;
     }
 
+    public function setInvalidJsonHeader($reaxiumMessage){
+        $reaxiumMessage['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_JSON_HEADER_CODE;
+        $reaxiumMessage['ReaxiumResponse']['message'] = ReaxiumApiMessages::$INVALID_JSON_HEADER_MESSAGE;
+        return $reaxiumMessage;
+    }
+
     public function setSuccessfulResponse($reaxiumMessage){
         $reaxiumMessage['ReaxiumResponse']['code'] = ReaxiumApiMessages::$SUCCESS_CODE;
         $reaxiumMessage['ReaxiumResponse']['message'] = ReaxiumApiMessages::$SUCCESS_MESSAGE;
+        return $reaxiumMessage;
+    }
+
+    public function setSuccessAccess($reaxiumMessage){
+        $reaxiumMessage['ReaxiumResponse']['code'] = ReaxiumApiMessages::$SUCCESS_CODE;
+        $reaxiumMessage['ReaxiumResponse']['message'] = ReaxiumApiMessages::$SUCCESS_ACCESS;
+        return $reaxiumMessage;
+    }
+
+    public function setSuccessfulDelete($reaxiumMessage){
+        $reaxiumMessage['ReaxiumResponse']['code'] = ReaxiumApiMessages::$SUCCESS_CODE;
+        $reaxiumMessage['ReaxiumResponse']['message'] = ReaxiumApiMessages::$SUCCESS_DELETED_MESSAGE;
+        return $reaxiumMessage;
+    }
+
+    public function setSuccessfulUpdated($reaxiumMessage){
+        $reaxiumMessage['ReaxiumResponse']['code'] = ReaxiumApiMessages::$SUCCESS_CODE;
+        $reaxiumMessage['ReaxiumResponse']['message'] = ReaxiumApiMessages::$SUCCESS_UPDATED_MESSAGE;
         return $reaxiumMessage;
     }
 

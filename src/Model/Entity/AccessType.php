@@ -1,15 +1,14 @@
 <?php
-
 namespace App\Model\Entity;
 use Cake\ORM\Entity;
-
 /**
  * Created by PhpStorm.
- * User: Eduardo Luttinger
- * Date: 20/03/2016
- * Time: 08:03 PM
+ * User: SinAsignari54GB1TB
+ * Date: 22/03/2016
+ * Time: 03:29 AM
  */
-class Applications extends Entity {
+class AccessType extends Entity
+{
 
     /**
      * Fields that can be mass assigned using newEntity() or patchEntity().
@@ -22,8 +21,6 @@ class Applications extends Entity {
      */
     protected $_accessible = [
         '*' => true,
-        'application_id' => false,
+        'access_type_id' => false,
     ];
-
-
 }

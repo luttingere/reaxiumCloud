@@ -1,7 +1,7 @@
 <?php
 /**
  * Created by PhpStorm.
- * User: SinAsignari54GB1TB
+ * User: Eduardo Luttinger
  * Date: 20/03/2016
  * Time: 08:05 PM
  */
@@ -14,7 +14,8 @@ use Cake\ORM\TableRegistry;
 use App\Util\ReaxiumApiMessages;
 
 
-class ApplicationsController extends ReaxiumAPIController {
+class ApplicationsController extends ReaxiumAPIController
+{
 
     /**
      * @api {post} /Applications/applicationInfo getApplicationInformation
@@ -24,11 +25,11 @@ class ApplicationsController extends ReaxiumAPIController {
      * @apiParamExample {json} Request-Example:
      *
      * {"ReaxiumParameters": {
-            "Applications": {
-                "application_id": "1"
-                }
-            }
-        }
+     * "Applications": {
+     * "application_id": "1"
+     * }
+     * }
+     * }
      *
      * @apiSuccessExample Success-Response:
      *     HTTP/1.1 200 OK
@@ -45,30 +46,30 @@ class ApplicationsController extends ReaxiumAPIController {
      *           }
      *
      * @apiErrorExample Error-Response Application Not Found:
-            {"ReaxiumResponse": {
-                "code": 404,
-                "message": "Application Not found",
-                "object": []
-                }
-              }
+     * {"ReaxiumResponse": {
+     * "code": 404,
+     * "message": "Application Not found",
+     * "object": []
+     * }
+     * }
      *
      *
-       @apiErrorExample Error-Response Invalid Parameters:
-            {"ReaxiumResponse": {
-                "code": 2,
-                "message": "Invalid Parameters received, please checkout the api documentation",
-                "object": []
-                }
-            }
+     * @apiErrorExample Error-Response Invalid Parameters:
+     * {"ReaxiumResponse": {
+     * "code": 2,
+     * "message": "Invalid Parameters received, please checkout the api documentation",
+     * "object": []
+     * }
+     * }
      *
      *
-        @apiErrorExample Error-Response Invalid Json Object:
-            {"ReaxiumResponse": {
-                "code": 3,
-                "message": "Invalid Json Object",
-                "object": []
-                }
-            }
+     * @apiErrorExample Error-Response Invalid Json Object:
+     * {"ReaxiumResponse": {
+     * "code": 3,
+     * "message": "Invalid Json Object",
+     * "object": []
+     * }
+     * }
      */
     public function applicationInfo()
     {
@@ -85,10 +86,10 @@ class ApplicationsController extends ReaxiumAPIController {
                     $application = $this->Applications->patchEntity($application, $jsonObject['ReaxiumParameters']);
                     if (isset($application->application_id)) {
                         $application = $this->getApplicationInfo($application->application_id);
-                        if(isset($application)){
+                        if (isset($application)) {
                             $response['ReaxiumResponse']['object'] = $application;
                             $response = parent::setSuccessfulResponse($response);
-                        }else{
+                        } else {
                             $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
                             $response['ReaxiumResponse']['message'] = 'Application Not found';
                         }
@@ -120,9 +121,9 @@ class ApplicationsController extends ReaxiumAPIController {
     {
         $application = TableRegistry::get("Applications");
         $application = $application->findByApplicationId($applicationId)->contain("Status");
-        if($application->count() > 0){
+        if ($application->count() > 0) {
             $application = $application->toArray();
-        }else{
+        } else {
             $application = null;
         }
 
@@ -161,13 +162,13 @@ class ApplicationsController extends ReaxiumAPIController {
      *              }
      *
      *
-     *  @apiErrorExample Error-Response No Applications Found:
-            {"ReaxiumResponse": {
-                "code": 404,
-                "message": "No Applications Found",
-                "object": []
-             }
-            }
+     * @apiErrorExample Error-Response No Applications Found:
+     * {"ReaxiumResponse": {
+     * "code": 404,
+     * "message": "No Applications Found",
+     * "object": []
+     * }
+     * }
      *
      */
     public function allApplicationInfo()
@@ -177,9 +178,9 @@ class ApplicationsController extends ReaxiumAPIController {
         $response = parent::getDefaultReaxiumMessage();
         try {
             $applications = $this->getAllAppsInfo();
-            if(isset($applications)){
+            if (isset($applications)) {
                 $response['ReaxiumResponse']['object'] = $applications;
-            }else{
+            } else {
                 $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
                 $response['ReaxiumResponse']['message'] = 'No Applications Found';
             }
@@ -198,12 +199,13 @@ class ApplicationsController extends ReaxiumAPIController {
      *
      * @return \Cake\ORM\Table  --All Apps information
      */
-    private function getAllAppsInfo(){
+    private function getAllAppsInfo()
+    {
         $applications = TableRegistry::get("Applications");
         $applications = $applications->find()->contain(array("Status"));
-        if($applications->count() > 0){
+        if ($applications->count() > 0) {
             $applications = $applications->toArray();
-        }else{
+        } else {
             $applications = null;
         }
         return $applications;
@@ -217,55 +219,56 @@ class ApplicationsController extends ReaxiumAPIController {
      *
      * @apiParamExample {json} Request-Example:
      *   {"ReaxiumParameters": {
-                "ReaxiumDevice": {
-                "device_name": "Another Application",
-                "version": "1.0"
-                }
-            }
-          }
+     * "ReaxiumDevice": {
+     * "device_name": "Another Application",
+     * "version": "1.0"
+     * }
+     * }
+     * }
      *
      *
      * @apiSuccessExample Success-Response:
      *     HTTP/1.1 200 OK
      *     {
-                "ReaxiumResponse": {
-                "code": 0,
-                "message": "SAVED SUCCESSFUL",
-                "object": {
-                    "device_name": "Another Application",
-                    "version": "1.0",
-                    "application_id": 1
-                    "status_id": 1
-                    }
-                }
-            }
+     * "ReaxiumResponse": {
+     * "code": 0,
+     * "message": "SAVED SUCCESSFUL",
+     * "object": {
+     * "device_name": "Another Application",
+     * "version": "1.0",
+     * "application_id": 1
+     * "status_id": 1
+     * }
+     * }
+     * }
      *
      *
      * @apiErrorExample Error-Response: Application already exist
      *  {
-            "ReaxiumResponse": {
-                "code": 101,
-                "message": "Application name already exist in the system",
-                "object": []
-            }
-        }
+     * "ReaxiumResponse": {
+     * "code": 101,
+     * "message": "Application name already exist in the system",
+     * "object": []
+     * }
+     * }
      *
      */
-    public function createAnApplication(){
+    public function createAnApplication()
+    {
         Log::info("Create a new Application service has been invoked");
         parent::setResultAsAJson();
         $response = parent::getDefaultReaxiumMessage();
         $jsonObject = parent::getJsonReceived();
-        Log::info('Object received: '.json_encode($jsonObject));
+        Log::info('Object received: ' . json_encode($jsonObject));
         if (parent::validReaxiumJsonHeader($jsonObject)) {
             try {
                 if (isset($jsonObject['ReaxiumParameters']["Applications"])) {
                     $result = $this->createANewApplication($jsonObject['ReaxiumParameters']);
-                    Log::info('Resultado: '. $result);
-                    if($result){
+                    Log::info('Resultado: ' . $result);
+                    if ($result) {
                         $response = parent::setSuccessfulSave($response);
                         $response['ReaxiumResponse']['object'] = $result;
-                    }else{
+                    } else {
                         $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$CANNOT_SAVE;
                         $response['ReaxiumResponse']['message'] = 'There was a problem trying to save the application, please try later';
                     }
@@ -277,7 +280,7 @@ class ApplicationsController extends ReaxiumAPIController {
                 $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$CANNOT_SAVE;
                 $response['ReaxiumResponse']['message'] = 'Device name already exist in the system';
             }
-        }else{
+        } else {
             $response = parent::setInvalidJsonMessage($response);
         }
         Log::info("Responde Object: " . json_encode($response));
@@ -291,7 +294,8 @@ class ApplicationsController extends ReaxiumAPIController {
      * @param $applicationJSON
      * @return created application
      */
-    private function createANewApplication($applicationJSON){
+    private function createANewApplication($applicationJSON)
+    {
         $this->loadModel("Applications");
         $application = $this->Applications->newEntity();
         $application = $this->Applications->patchEntity($application, $applicationJSON);
@@ -299,6 +303,307 @@ class ApplicationsController extends ReaxiumAPIController {
         return $application;
     }
 
+
+    /**
+     * @api {post} /Applications/deleteApplication DeleteAnApplicationFromSystem
+     * @apiName deleteApplication
+     * @apiGroup Applications
+     *
+     * @apiParamExample {json} Request-Example:
+     *
+     * {"ReaxiumParameters": {
+     *      "Applications": {
+     *          "application_id": "1"
+     *            }
+     *          }
+     *      }
+     *
+     * @apiSuccessExample Success-Response:
+     *     HTTP/1.1 200 OK
+     *     {"ReaxiumResponse": {
+     *              "code": "00",
+     *              "message": "SUCCESSFUL DELETE",
+     *               "object": []
+     *
+     *
+     * @apiErrorExample Error-Response Application Not Found:
+     *      {"ReaxiumResponse": {
+     *          "code": 404,
+     *          "message": "Application Not found",
+     *          "object": []
+     *           }
+     *          }
+     *
+     *
+     * @apiErrorExample Error-Response Invalid Parameters:
+     *      {"ReaxiumResponse": {
+     *          "code": 2,
+     *          "message": "Invalid Parameters received, please checkout the api documentation",
+     *          "object": []
+     *           }
+     *          }
+     *
+     *
+     * @apiErrorExample Error-Response Invalid Json Object:
+     *      {"ReaxiumResponse": {
+     *           "code": 2,
+     *           "message": "Invalid Parameters received, please checkout the api documentation",
+     *           "object": []
+     *          }
+     *      }
+     */
+    public function deleteApplication()
+    {
+        Log::info("deleting  an Application service is running");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+        $deviceId = null;
+        Log::info('Object received: ' . json_encode($jsonObject));
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
+            try {
+                if (isset($jsonObject['ReaxiumParameters']["Applications"])) {
+                    $this->loadModel("Applications");
+                    $application = $this->Applications->newEntity();
+                    $application = $this->Applications->patchEntity($application, $jsonObject['ReaxiumParameters']);
+                    if (isset($application->application_id)) {
+                        $applicationId = $application->application_id;
+                        $application = $this->getApplicationInfo($applicationId);
+                        if (isset($application)) {
+                            $this->deleteAnApplication($applicationId);
+                            $response = parent::setSuccessfulDelete($response);
+                        } else {
+                            $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                            $response['ReaxiumResponse']['message'] = 'Application Not found';
+                        }
+                    } else {
+                        $response = parent::seInvalidParametersMessage($response);
+                    }
+                } else {
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+            } catch (\Exception $e) {
+                Log::info("Error deleting the application: " . $applicationId . " error:" . $e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+        } else {
+            $response = parent::setInvalidJsonMessage($response);
+        }
+        Log::info("Responde Object: " . json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
+    /**
+     * Delete an application from de system
+     * @param $applicationId
+     */
+    private function deleteAnApplication($applicationId)
+    {
+        $this->loadModel("Applications");
+        $this->loadModel("ApplicationsRelationship");
+        $associatedApplication = $this->ApplicationsRelationship->findByApplicationId($applicationId);
+        if ($associatedApplication->count() > 0) {
+            $associatedApplication = $associatedApplication->toArray();
+            Log::info("The application id: " . $associatedApplication[0]['application_id'] . "has associations and they will be deleted");
+            $this->ApplicationsRelationship->deleteAll(array('application_id' => $associatedApplication[0]['application_id']));
+        }
+        $this->Applications->updateAll(array('status_id' => '3'), array('application_id' => $associatedApplication[0]['application_id']));
+    }
+
+    /**
+     * @api {post} /Applications/changeApplicationStatus ChangeTheStatusOfAnApplication
+     * @apiName changeApplicationStatus
+     * @apiGroup Applications
+     *
+     * @apiParamExample {json} Request-Example:
+     *
+     * {"ReaxiumParameters": {
+     *      "Applications": {
+     *          "application_id": "1"
+     *          "status_id": "1"
+     *            }
+     *          }
+     *      }
+     *
+     * @apiSuccessExample Success-Response:
+     *     HTTP/1.1 200 OK
+     *     {"ReaxiumResponse": {
+     *              "code": "00",
+     *              "message": "SUCCESSFUL UPDATED",
+     *               "object": []
+     *
+     *
+     * @apiErrorExample Error-Response Application Not Found:
+     *      {"ReaxiumResponse": {
+     *          "code": 404,
+     *          "message": "Application Not found",
+     *          "object": []
+     *           }
+     *          }
+     *
+     *
+     * @apiErrorExample Error-Response Invalid Parameters:
+     *      {"ReaxiumResponse": {
+     *          "code": 2,
+     *          "message": "Invalid Parameters received, please checkout the api documentation",
+     *          "object": []
+     *           }
+     *          }
+     *
+     *
+     * @apiErrorExample Error-Response Invalid Json Object:
+     *      {"ReaxiumResponse": {
+     *           "code": 2,
+     *           "message": "Invalid Parameters received, please checkout the api documentation",
+     *           "object": []
+     *          }
+     *      }
+     */
+    public function changeApplicationStatus()
+    {
+        Log::info("updating the status of an Application service is running");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+        $deviceId = null;
+        Log::info('Object received: ' . json_encode($jsonObject));
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
+            try {
+                if (isset($jsonObject['ReaxiumParameters']["Applications"])) {
+                    $this->loadModel("Applications");
+                    $application = $this->Applications->newEntity();
+                    $application = $this->Applications->patchEntity($application, $jsonObject['ReaxiumParameters']);
+                    if (isset($application->application_id) && isset($application->status_id)) {
+                        $applicationId = $application->application_id;
+                        $applicationFound = $this->getApplicationInfo($applicationId);
+                        if (isset($applicationFound)) {
+                            $this->updateApplication(array('status_id' => $application->status_id), array('application_id' => $applicationId));
+                            $response = parent::setSuccessfulUpdated($response);
+                        } else {
+                            $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                            $response['ReaxiumResponse']['message'] = 'Application Not found';
+                        }
+                    } else {
+                        $response = parent::seInvalidParametersMessage($response);
+                    }
+                } else {
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+            } catch (\Exception $e) {
+                Log::info("Error deleting the application: " . $applicationId . " error:" . $e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+        } else {
+            $response = parent::setInvalidJsonMessage($response);
+        }
+        Log::info("Responde Object: " . json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
+
+    /**
+     * @api {post} /Applications/changeApplicationVersion ChangeTheVersionOfAnApplication
+     * @apiName changeApplicationVersion
+     * @apiGroup Applications
+     *
+     * @apiParamExample {json} Request-Example:
+     *
+     * {"ReaxiumParameters": {
+     *      "Applications": {
+     *          "application_id": "1"
+     *          "version": "2.0"
+     *            }
+     *          }
+     *      }
+     *
+     * @apiSuccessExample Success-Response:
+     *     HTTP/1.1 200 OK
+     *     {"ReaxiumResponse": {
+     *              "code": "00",
+     *              "message": "SUCCESSFUL UPDATED",
+     *               "object": []
+     *
+     *
+     * @apiErrorExample Error-Response Application Not Found:
+     *      {"ReaxiumResponse": {
+     *          "code": 404,
+     *          "message": "Application Not found",
+     *          "object": []
+     *           }
+     *          }
+     *
+     *
+     * @apiErrorExample Error-Response Invalid Parameters:
+     *      {"ReaxiumResponse": {
+     *          "code": 2,
+     *          "message": "Invalid Parameters received, please checkout the api documentation",
+     *          "object": []
+     *           }
+     *          }
+     *
+     *
+     * @apiErrorExample Error-Response Invalid Json Object:
+     *      {"ReaxiumResponse": {
+     *           "code": 2,
+     *           "message": "Invalid Parameters received, please checkout the api documentation",
+     *           "object": []
+     *          }
+     *      }
+     */
+    public function changeApplicationVersion()
+    {
+        Log::info("updating the version of an Application service is running");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+        $deviceId = null;
+        Log::info('Object received: ' . json_encode($jsonObject));
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
+            try {
+                if (isset($jsonObject['ReaxiumParameters']["Applications"])) {
+                    $this->loadModel("Applications");
+                    $application = $this->Applications->newEntity();
+                    $application = $this->Applications->patchEntity($application, $jsonObject['ReaxiumParameters']);
+                    if (isset($application->application_id) && isset($application->version)) {
+                        $applicationId = $application->application_id;
+                        $applicationFound = $this->getApplicationInfo($applicationId);
+                        if (isset($applicationFound)) {
+                            $this->updateApplication(array('version' => $application->version), array('application_id' => $applicationId));
+                            $response = parent::setSuccessfulUpdated($response);
+                        } else {
+                            $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                            $response['ReaxiumResponse']['message'] = 'Application Not found';
+                        }
+                    } else {
+                        $response = parent::seInvalidParametersMessage($response);
+                    }
+                } else {
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+            } catch (\Exception $e) {
+                Log::info("Error deleting the application: " . $applicationId . " error:" . $e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+        } else {
+            $response = parent::setInvalidJsonMessage($response);
+        }
+        Log::info("Responde Object: " . json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
+
+
+
+    /**
+     * Update the attributes of an Application
+     * @param $arrayFields
+     * @param $arrayConditions
+     */
+    private function updateApplication($arrayFields, $arrayConditions)
+    {
+        $this->loadModel("Applications");
+        $this->Applications->updateAll($arrayFields, $arrayConditions);
+    }
 
 
 }

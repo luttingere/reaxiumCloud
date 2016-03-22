@@ -9,7 +9,6 @@
 namespace App\Controller;
 
 
-use Cake\Core\Exception\Exception;
 use Cake\Log\Log;
 use Cake\ORM\TableRegistry;
 use App\Util\ReaxiumApiMessages;
@@ -26,11 +25,11 @@ class DeviceController extends ReaxiumAPIController
      * @apiParamExample {json} Request-Example:
      *
      * {"ReaxiumParameters": {
-            "ReaxiumDevice": {
-                "device_id": "1"
-                }
-              }
-            }
+     * "ReaxiumDevice": {
+     * "device_id": "1"
+     * }
+     * }
+     * }
      *
      * @apiSuccessExample Success-Response:
      *     HTTP/1.1 200 OK
@@ -53,30 +52,30 @@ class DeviceController extends ReaxiumAPIController
      *
      *
      * @apiErrorExample Error-Response Device Not Found:
-            {"ReaxiumResponse": {
-                "code": 404,
-                "message": "Device Not found",
-                "object": []
-                }
-             }
+     * {"ReaxiumResponse": {
+     * "code": 404,
+     * "message": "Device Not found",
+     * "object": []
+     * }
+     * }
      *
      *
-        @apiErrorExample Error-Response Invalid Parameters:
-        {"ReaxiumResponse": {
-            "code": 2,
-            "message": "Invalid Parameters received, please checkout the api documentation",
-            "object": []
-            }
-          }
+     * @apiErrorExample Error-Response Invalid Parameters:
+     * {"ReaxiumResponse": {
+     * "code": 2,
+     * "message": "Invalid Parameters received, please checkout the api documentation",
+     * "object": []
+     * }
+     * }
      *
      *
-         @apiErrorExample Error-Response Invalid Json Object:
-        {"ReaxiumResponse": {
-            "code": 2,
-            "message": "Invalid Parameters received, please checkout the api documentation",
-            "object": []
-            }
-         }
+     * @apiErrorExample Error-Response Invalid Json Object:
+     * {"ReaxiumResponse": {
+     * "code": 2,
+     * "message": "Invalid Parameters received, please checkout the api documentation",
+     * "object": []
+     * }
+     * }
      */
     public function deviceInfo()
     {
@@ -92,10 +91,10 @@ class DeviceController extends ReaxiumAPIController
                     $device = $this->ReaxiumDevice->patchEntity($device, $jsonObject['ReaxiumParameters']);
                     if (isset($device->device_id)) {
                         $device = $this->getDeviceInfo($device->device_id);
-                        if(isset($device)){
+                        if (isset($device)) {
                             $response['ReaxiumResponse']['object'] = $device;
                             $response = parent::setSuccessfulResponse($response);
-                        }else{
+                        } else {
                             $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
                             $response['ReaxiumResponse']['message'] = 'Device Not found';
                         }
@@ -126,10 +125,10 @@ class DeviceController extends ReaxiumAPIController
     private function getDeviceInfo($deviceId)
     {
         $device = TableRegistry::get("ReaxiumDevice");
-        $device = $device->findByDeviceId($deviceId)->contain(array("Status","Applications"));
-        if($device->count() > 0){
+        $device = $device->find()->where(array('ReaxiumDevice.device_id' => $deviceId))->contain(array("Status", "Applications"));
+        if ($device->count() > 0) {
             $device = $device->toArray();
-        }else{
+        } else {
             $device = null;
         }
 
@@ -174,12 +173,12 @@ class DeviceController extends ReaxiumAPIController
      *
      *
      * @apiErrorExample Error-Response No Deices Found:
-        {"ReaxiumResponse": {
-             "code": 404,
-             "message": "No Deices Found",
-             "object": []
-            }
-         }
+     * {"ReaxiumResponse": {
+     * "code": 404,
+     * "message": "No Deices Found",
+     * "object": []
+     * }
+     * }
      *
      */
     public function allDevicesInfo()
@@ -187,18 +186,18 @@ class DeviceController extends ReaxiumAPIController
         Log::info("All Device information Service invoked");
         parent::setResultAsAJson();
         $response = parent::getDefaultReaxiumMessage();
-            try {
-                $devices = $this->getAllDevices();
-                if(isset($devices)){
-                    $response['ReaxiumResponse']['object'] = $devices;
-                }else{
-                    $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
-                    $response['ReaxiumResponse']['message'] = 'No Deices Found';
-                }
-            } catch (\Exception $e) {
-                Log::info("Error: " . $e->getMessage());
-                $response = parent::setInternalServiceError($response);
+        try {
+            $devices = $this->getAllDevices();
+            if (isset($devices)) {
+                $response['ReaxiumResponse']['object'] = $devices;
+            } else {
+                $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                $response['ReaxiumResponse']['message'] = 'No Deices Found';
             }
+        } catch (\Exception $e) {
+            Log::info("Error: " . $e->getMessage());
+            $response = parent::setInternalServiceError($response);
+        }
         Log::info("Responde Object: " . json_encode($response));
         $this->response->body(json_encode($response));
     }
@@ -210,12 +209,13 @@ class DeviceController extends ReaxiumAPIController
      *
      * @return \Cake\ORM\Table  --All Devices information
      */
-    private function getAllDevices(){
+    private function getAllDevices()
+    {
         $devices = TableRegistry::get("ReaxiumDevice");
-        $devices = $devices->find()->contain(array("Status","Applications"));
-        if($devices->count() > 0){
+        $devices = $devices->find()->contain(array("Applications", "Status"))->order(array('device_id'));
+        if ($devices->count() > 0) {
             $devices = $devices->toArray();
-        }else{
+        } else {
             $devices = null;
         }
         return $devices;
@@ -229,54 +229,55 @@ class DeviceController extends ReaxiumAPIController
      *
      * @apiParamExample {json} Request-Example:
      *   {"ReaxiumParameters": {
-            "ReaxiumDevice": {
-                "device_name": "Another Device",
-                "device_description": "Device working for Florida School"
-                }
-            }
-         }
+     * "ReaxiumDevice": {
+     * "device_name": "Another Device",
+     * "device_description": "Device working for Florida School"
+     * }
+     * }
+     * }
      *
      *
      * @apiSuccessExample Success-Response:
      *     HTTP/1.1 200 OK
      *     {
-                "ReaxiumResponse": {
-                    "code": 0,
-                    "message": "SAVED SUCCESSFUL",
-                    "object": {
-                        "device_name": "Another Device",
-                        "device_description": "Device working for Florida School",
-                        "device_id": 18
-                    }
-                }
-            }
+     * "ReaxiumResponse": {
+     * "code": 0,
+     * "message": "SAVED SUCCESSFUL",
+     * "object": {
+     * "device_name": "Another Device",
+     * "device_description": "Device working for Florida School",
+     * "device_id": 18
+     * }
+     * }
+     * }
      *
      *
      * @apiErrorExample Error-Response: Device already exist
      *  {
-                "ReaxiumResponse": {
-                    "code": 101,
-                    "message": "Device name already exist in the system",
-                    "object": []
-                }
-            }
+     * "ReaxiumResponse": {
+     * "code": 101,
+     * "message": "Device name already exist in the system",
+     * "object": []
+     * }
+     * }
      *
      */
-    public function createDevice(){
+    public function createDevice()
+    {
         Log::info("Create a new Device service has been invoked");
         parent::setResultAsAJson();
         $response = parent::getDefaultReaxiumMessage();
         $jsonObject = parent::getJsonReceived();
-        Log::info('Object received: '.json_encode($jsonObject));
+        Log::info('Object received: ' . json_encode($jsonObject));
         if (parent::validReaxiumJsonHeader($jsonObject)) {
             try {
                 if (isset($jsonObject['ReaxiumParameters']["ReaxiumDevice"])) {
                     $result = $this->createANewDevice($jsonObject['ReaxiumParameters']);
-                    Log::info('Resultado: '. $result);
-                    if($result){
+                    Log::info('Resultado: ' . $result);
+                    if ($result) {
                         $response = parent::setSuccessfulSave($response);
                         $response['ReaxiumResponse']['object'] = $result;
-                    }else{
+                    } else {
                         $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$CANNOT_SAVE;
                         $response['ReaxiumResponse']['message'] = 'There was a problem trying to save the device, please try later';
                     }
@@ -288,7 +289,7 @@ class DeviceController extends ReaxiumAPIController
                 $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$CANNOT_SAVE;
                 $response['ReaxiumResponse']['message'] = 'Device name already exist in the system';
             }
-        }else{
+        } else {
             $response = parent::setInvalidJsonMessage($response);
         }
         Log::info("Responde Object: " . json_encode($response));
@@ -302,12 +303,314 @@ class DeviceController extends ReaxiumAPIController
      * @param $deviceJSON
      * @return created device
      */
-    private function createANewDevice($deviceJSON){
+    private function createANewDevice($deviceJSON)
+    {
         $this->loadModel("ReaxiumDevice");
         $device = $this->ReaxiumDevice->newEntity();
         $device = $this->ReaxiumDevice->patchEntity($device, $deviceJSON);
         $result = $this->ReaxiumDevice->save($device);
         return $result;
+    }
+
+
+    /**
+     * @api {post} /Device/deleteDevice DeleteADeviceFromSystem
+     * @apiName deleteDevice
+     * @apiGroup Device
+     *
+     * @apiParamExample {json} Request-Example:
+     *
+     * {"ReaxiumParameters": {
+     *      "ReaxiumDevice": {
+     *          "device_id": "1"
+     *            }
+     *          }
+     *      }
+     *
+     * @apiSuccessExample Success-Response:
+     *     HTTP/1.1 200 OK
+     *     {"ReaxiumResponse": {
+     *              "code": "00",
+     *              "message": "SUCCESSFUL DELETE",
+     *               "object": []
+     *
+     *
+     * @apiErrorExample Error-Response Device Not Found:
+     *      {"ReaxiumResponse": {
+     *          "code": 404,
+     *          "message": "Device Not found",
+     *          "object": []
+     *           }
+     *          }
+     *
+     *
+     * @apiErrorExample Error-Response Invalid Parameters:
+     *      {"ReaxiumResponse": {
+     *          "code": 2,
+     *          "message": "Invalid Parameters received, please checkout the api documentation",
+     *          "object": []
+     *           }
+     *          }
+     *
+     *
+     * @apiErrorExample Error-Response Invalid Json Object:
+     *      {"ReaxiumResponse": {
+     *           "code": 2,
+     *           "message": "Invalid Parameters received, please checkout the api documentation",
+     *           "object": []
+     *          }
+     *      }
+     */
+    public function deleteDevice()
+    {
+        Log::info("deleting  Device service is running");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+        $deviceId = null;
+        Log::info('Object received: ' . json_encode($jsonObject));
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
+            try {
+                if (isset($jsonObject['ReaxiumParameters']["ReaxiumDevice"])) {
+                    $this->loadModel("ReaxiumDevice");
+                    $device = $this->ReaxiumDevice->newEntity();
+                    $device = $this->ReaxiumDevice->patchEntity($device, $jsonObject['ReaxiumParameters']);
+                    if (isset($device->device_id)) {
+                        $deviceId = $device->device_id;
+                        $device = $this->getDeviceInfo($deviceId);
+                        if (isset($device)) {
+                            $this->deleteADevice($deviceId);
+                            $response = parent::setSuccessfulDelete($response);
+                        } else {
+                            $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                            $response['ReaxiumResponse']['message'] = 'Device Not found';
+                        }
+                    } else {
+                        $response = parent::seInvalidParametersMessage($response);
+                    }
+                } else {
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+            } catch (\Exception $e) {
+                Log::info("Error deleting the device: " . $deviceId . " error:" . $e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+        } else {
+            $response = parent::setInvalidJsonMessage($response);
+        }
+        Log::info("Responde Object: " . json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
+    /**
+     * Delete a device from de system
+     * @param $deviceId
+     */
+    private function deleteADevice($deviceId)
+    {
+        $this->loadModel("ReaxiumDevice");
+        $this->loadModel("ApplicationsRelationship");
+        $associatedDevice = $this->ApplicationsRelationship->findByDeviceId($deviceId);
+        if ($associatedDevice->count() > 0) {
+            $associatedDevice = $associatedDevice->toArray();
+            Log::info("The device id: " . $associatedDevice[0]['device_id'] . "has an association and it will be deleted");
+            $this->ApplicationsRelationship->deleteAll(array('device_id' => $associatedDevice[0]['device_id']));
+        }
+        $this->ReaxiumDevice->updateAll(array('status_id' => '3'), array('device_id' => $associatedDevice[0]['device_id']));
+    }
+
+
+    /**
+     * @api {post} /Device/associateAnApplicationWithADevice AssociateAnApplicationWithADevice
+     * @apiName associateAnApplicationWithADevice
+     * @apiGroup Device
+     *
+     * @apiParamExample {json} Request-Example:
+     *   {"ReaxiumParameters": {
+     *      "ApplicationsRelationship": {
+     *       "application_id": "1",
+     *       "device_id": "1"
+     *       }
+     *   }
+     * }
+     *
+     *
+     * @apiSuccessExample Success-Response:
+     *     HTTP/1.1 200 OK
+     *     {
+     *         "ReaxiumResponse": {
+     *           "code": 0,
+     *           "message": "SAVED SUCCESSFUL",
+     *           "object": {}
+     *          }
+     *      }
+     *
+     *
+     * @apiErrorExample Error-Response: Association already exist
+     *  {
+     *          "ReaxiumResponse": {
+     *              "code": 101,
+     *              "message": "this association already exist in the system",
+     *              "object": []
+     *              }
+     *          }
+     *
+     *
+     *   @apiErrorExample Error-Response:
+     *  {
+     *          "ReaxiumResponse": {
+     *              "code": 03,
+     *              "message":"Internal Server Error, Please contact with the api administrator"
+     *              "object": []
+     *              "errorInfo": "Please, validate if your device_id and application_id exist in the cloud",
+     *              }
+     *          }
+     *
+     */
+    public function associateAnApplicationWithADevice()
+    {
+        Log::info("Associating an applications with a a Device Service running");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+        Log::info('Object received: ' . json_encode($jsonObject));
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
+            try {
+                $this->loadModel("ApplicationsRelationship");
+                $relationship = $this->ApplicationsRelationship->newEntity();
+                $relationship = $this->ApplicationsRelationship->patchEntity($relationship, $jsonObject['ReaxiumParameters']);
+                if (isset($relationship->device_id)) {
+                    $relationshipFound = $this->ApplicationsRelationship->findByDeviceId($relationship->device_id);
+                    if ($relationshipFound->count() > 0) {
+                        $relationshipFound = $relationshipFound->toArray();
+                        if ($relationshipFound[0]['application_id'] != $relationship->application_id) {
+                            $this->ApplicationsRelationship->updateAll(array('application_id' => $relationship->application_id), array('device_id' => $relationship->device_id));
+                            $response = parent::setSuccessfulSave($response);
+                            Log::info("The Device ID: " . $relationship->device_id . "has been associated with the application id: " . $relationship->application_id);
+                        } else {
+                            $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$CANNOT_SAVE;
+                            $response['ReaxiumResponse']['message'] = 'this association already exist in the system';
+                        }
+                    } else {
+                        $this->ApplicationsRelationship->save($relationship);
+                        $response = parent::setSuccessfulSave($response);
+                        Log::info("The Device ID: " . $relationship->device_id . "has been associated with the application id: " . $relationship->application_id);
+                    }
+                } else {
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+            } catch (\Exception $e) {
+                Log::info("Error associating an Application with a device: " . $e->getMessage());
+                $response = parent::setInternalServiceError($response);
+                $response['ReaxiumResponse']['errorInfo'] = 'Please, validate if your device_id and application_id exist in the cloud';
+            }
+        } else {
+            $response = parent::setInvalidJsonMessage($response);
+        }
+        $this->response->body(json_encode($response));
+    }
+
+
+    /**
+     * @api {post} /Device/changeDeviceStatus ChangeTheStatusOfADevice
+     * @apiName changeDeviceStatus
+     * @apiGroup Device
+     *
+     * @apiParamExample {json} Request-Example:
+     *
+     * {"ReaxiumParameters": {
+     *      "ReaxiumDevice": {
+     *          "device_id": "1"
+     *          "status_id": "1"
+     *            }
+     *          }
+     *      }
+     *
+     * @apiSuccessExample Success-Response:
+     *     HTTP/1.1 200 OK
+     *     {"ReaxiumResponse": {
+     *              "code": "00",
+     *              "message": "SUCCESSFUL UPDATED",
+     *               "object": []
+     *
+     *
+     * @apiErrorExample Error-Response Device Not Found:
+     *      {"ReaxiumResponse": {
+     *          "code": 404,
+     *          "message": "Device Not found",
+     *          "object": []
+     *           }
+     *          }
+     *
+     *
+     * @apiErrorExample Error-Response Invalid Parameters:
+     *      {"ReaxiumResponse": {
+     *          "code": 2,
+     *          "message": "Invalid Parameters received, please checkout the api documentation",
+     *          "object": []
+     *           }
+     *          }
+     *
+     *
+     * @apiErrorExample Error-Response Invalid Json Object:
+     *      {"ReaxiumResponse": {
+     *           "code": 2,
+     *           "message": "Invalid Parameters received, please checkout the api documentation",
+     *           "object": []
+     *          }
+     *      }
+     */
+    public function changeDeviceStatus()
+    {
+        Log::info("updating the status of a Device service is running");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+        $deviceId = null;
+        Log::info('Object received: ' . json_encode($jsonObject));
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
+            try {
+                if (isset($jsonObject['ReaxiumParameters']["ReaxiumDevice"])) {
+                    $this->loadModel("ReaxiumDevice");
+                    $device = $this->ReaxiumDevice->newEntity();
+                    $device = $this->ReaxiumDevice->patchEntity($device, $jsonObject['ReaxiumParameters']);
+                    if (isset($device->device_id) && isset($device->status_id)) {
+                        $deviceId = $device->device_id;
+                        $deviceFound = $this->getDeviceInfo($deviceId);
+                        if (isset($deviceFound)) {
+                            $this->updateDevice(array('status_id' => $device->status_id), array('device_id' => $deviceId));
+                            $response = parent::setSuccessfulUpdated($response);
+                        } else {
+                            $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                            $response['ReaxiumResponse']['message'] = 'Device Not found';
+                        }
+                    } else {
+                        $response = parent::seInvalidParametersMessage($response);
+                    }
+                } else {
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+            } catch (\Exception $e) {
+                Log::info("Error updating the status of the Device: " . $deviceId . " error:" . $e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+        } else {
+            $response = parent::setInvalidJsonMessage($response);
+        }
+        Log::info("Responde Object: " . json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
+
+    /**
+     * Update the attributes of a Device
+     * @param $arrayFields
+     * @param $arrayConditions
+     */
+    private function updateDevice($arrayFields, $arrayConditions)
+    {
+        $this->loadModel("ReaxiumDevice");
+        $this->ReaxiumDevice->updateAll($arrayFields, $arrayConditions);
     }
 
 
