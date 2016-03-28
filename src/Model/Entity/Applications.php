@@ -21,8 +21,7 @@ class Applications extends Entity {
      * @var array
      */
     protected $_accessible = [
-        '*' => true,
-        'application_id' => false,
+        '*' => true
     ];
 
 

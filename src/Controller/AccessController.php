@@ -228,6 +228,47 @@ class AccessController extends ReaxiumAPIController
 
 
     /**
+     *
+     * Store an intent of access to the platform
+     *
+     * @param $userId
+     * @param $traffic_type
+     * @param $access_id
+     * @param $deviceId
+     * @param $trafficInfo
+     * @return mixed
+     */
+    private function registerTraffic($userId, $traffic_type, $access_id, $deviceId, $trafficInfo)
+    {
+        $trafficTable = TableRegistry::get("Traffic");
+        $trafficRecord = $trafficTable->newEntity();
+        $trafficRecord->traffic_type_id = $traffic_type;
+        $trafficRecord->user_id = $userId;
+        $trafficRecord->access_id = $access_id;
+        $trafficRecord->device_id = $deviceId;
+        $trafficRecord->traffic_info = $trafficInfo;
+        $trafficTable->save($trafficRecord);
+    }
+
+    /**
+     * @param $userId
+     * @param $trafficTable
+     * @return null
+     */
+    public function getUserLastTraffic($userId, $trafficTable)
+    {
+        $lastTraffic = $trafficTable->find('all', array('conditions' => array('user_id' => $userId)))->order('datetime DESC');
+        if ($lastTraffic->count() > 0) {
+            $lastTraffic = $lastTraffic->toArray();
+            $lastTraffic = $lastTraffic[0];
+        } else {
+            $lastTraffic = NULL;
+        }
+        return $lastTraffic;
+    }
+
+
+    /**
      * @api {post} /Access/createUserAccess CreateAnAccessForAUser
      * @apiName createUserAccess
      * @apiGroup AccessControl
@@ -248,19 +289,19 @@ class AccessController extends ReaxiumAPIController
      * @apiSuccessExample Success-Response:
      *     HTTP/1.1 200 OK
      *     {
-                "ReaxiumResponse": {
-                    "code": 0,
-                    "message": "SAVED SUCCESSFUL",
-                    "object": {
-                            "device_id": 1,
-                            "user_id": 1,
-                            "access_type_id": 1,
-                            "user_login_name": "reaxiumUser",
-                            "user_password": "reaxiumPassword",
-                            "access_id": 1
-                        }
-                    }
-                }
+     * "ReaxiumResponse": {
+     * "code": 0,
+     * "message": "SAVED SUCCESSFUL",
+     * "object": {
+     * "device_id": 1,
+     * "user_id": 1,
+     * "access_type_id": 1,
+     * "user_login_name": "reaxiumUser",
+     * "user_password": "reaxiumPassword",
+     * "access_id": 1
+     * }
+     * }
+     * }
      *
      *
      * @apiErrorExample Error-Response: User Access already exists
@@ -397,10 +438,21 @@ class AccessController extends ReaxiumAPIController
                             'AccessType.access_type_id' => $access->access_type_id,
                             'user_login_name' => $access->user_login_name,
                             'user_password' => $access->user_password);
-
                         $accessFound = $this->getUserAccessInfo($arrayOfConditions);
-
                         if (isset($accessFound)) {
+                            Log::info($accessFound);
+                            $trafficTable = TableRegistry::get("Traffic");
+                            $userId = $accessFound[0]['user_id'];
+                            $accessId = $accessFound[0]['access_id'];
+                            $deviceId = $accessFound[0]['device_id'];
+                            $lastTraffic = $this->getUserLastTraffic($userId, $trafficTable);
+                            Log::info("lastTraffic: ".$lastTraffic);
+                            if ($lastTraffic == NULL || ($lastTraffic['traffic_type_id'] == 2)) {
+                                Log::info("El usuario: " . $userId . " No tiene traficos el dia de hoy");
+                                $this->registerTraffic($userId, 1, $accessId, $deviceId,ReaxiumApiMessages::$SUCCESS_ACCESS);
+                            } else {
+                                $this->registerTraffic($userId, 2, $accessId, $deviceId,ReaxiumApiMessages::$SUCCESS_ACCESS);
+                            }
                             $response['ReaxiumResponse']['object'] = $accessFound;
                             $response = parent::setSuccessAccess($response);
                         } else {
@@ -415,7 +467,7 @@ class AccessController extends ReaxiumAPIController
                 }
             } catch (\Exception $e) {
                 Log::info("Error: " . $e->getMessage());
-                $response = parent::seInvalidParametersMessage($response);
+                $response = parent::setInternalServiceError($response);
             }
         } else {
             $response = parent::setInvalidJsonMessage($response);

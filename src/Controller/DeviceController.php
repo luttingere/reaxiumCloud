@@ -83,10 +83,12 @@ class DeviceController extends ReaxiumAPIController
         parent::setResultAsAJson();
         $response = parent::getDefaultReaxiumMessage();
         $jsonObject = parent::getJsonReceived();
+        Log::info('Object received: ' . json_encode($jsonObject));
         if (parent::validReaxiumJsonHeader($jsonObject)) {
             try {
                 if (isset($jsonObject['ReaxiumParameters']["ReaxiumDevice"])) {
                     $this->loadModel("ReaxiumDevice");
+                    Log::info($jsonObject['ReaxiumParameters']);
                     $device = $this->ReaxiumDevice->newEntity();
                     $device = $this->ReaxiumDevice->patchEntity($device, $jsonObject['ReaxiumParameters']);
                     if (isset($device->device_id)) {
@@ -411,12 +413,14 @@ class DeviceController extends ReaxiumAPIController
         $this->loadModel("ReaxiumDevice");
         $this->loadModel("ApplicationsRelationship");
         $associatedDevice = $this->ApplicationsRelationship->findByDeviceId($deviceId);
+        Log::info($associatedDevice);
         if ($associatedDevice->count() > 0) {
             $associatedDevice = $associatedDevice->toArray();
+            Log::info("associatedDevice: " . $associatedDevice);
             Log::info("The device id: " . $associatedDevice[0]['device_id'] . "has an association and it will be deleted");
             $this->ApplicationsRelationship->deleteAll(array('device_id' => $associatedDevice[0]['device_id']));
         }
-        $this->ReaxiumDevice->updateAll(array('status_id' => '3'), array('device_id' => $associatedDevice[0]['device_id']));
+        $this->ReaxiumDevice->updateAll(array('status_id' => '3'), array('device_id' => $deviceId));
     }
 
 
@@ -456,7 +460,7 @@ class DeviceController extends ReaxiumAPIController
      *          }
      *
      *
-     *   @apiErrorExample Error-Response:
+     * @apiErrorExample Error-Response:
      *  {
      *          "ReaxiumResponse": {
      *              "code": 03,
@@ -612,6 +616,158 @@ class DeviceController extends ReaxiumAPIController
         $this->loadModel("ReaxiumDevice");
         $this->ReaxiumDevice->updateAll($arrayFields, $arrayConditions);
     }
+
+
+
+    /**
+     * @api {post} /Device/deviceTrafficStatus getDeviceTrafficStatus
+     * @apiName deviceTrafficStatus
+     * @apiGroup Device
+     *
+     * @apiParamExample {json} Request-Example:
+     *
+     * {
+     *  "ReaxiumParameters": {
+     *      "ReaxiumDevice": {
+     *          "device_id": "1"
+     *        }
+     *      }
+     *   }
+     *
+     * @apiSuccessExample Success-Response:
+     *     HTTP/1.1 200 OK
+        {
+         "ReaxiumResponse": {
+            "code": 0,
+            "message": "SUCCESSFUL REQUEST",
+            "object": {
+                "DeviceTrafficStatus": {
+                    "IN": [{
+                        "user_id": 3,
+                        "document_id": "19055085",
+                        "first_name": "Jhon",
+                        "second_name": "Andrew",
+                        "first_last_name": "Doe",
+                        "second_last_name": "Smith",
+                        "status_id": 1,
+                        "trafficDate": "2016-03-28T19:11:46+0000"
+                        }],
+                    "OUT": [{
+                        "user_id": 1,
+                        "document_id": "19044081",
+                        "first_name": "Eduardo",
+                        "second_name": "Jose",
+                        "first_last_name": "Luttinger",
+                        "second_last_name": "Mogollon",
+                        "status_id": 1,
+                        "trafficDate": "2016-03-28T20:11:45+0000"
+                        }]
+                    }
+                }
+            }
+        }
+     *
+     *
+     * @apiErrorExample Error-Response Device Not Found:
+     * {"ReaxiumResponse": {
+     * "code": 404,
+     * "message": "Device Not found",
+     * "object": []
+     * }
+     * }
+     *
+     *
+     * @apiErrorExample Error-Response Invalid Parameters:
+     * {"ReaxiumResponse": {
+     * "code": 2,
+     * "message": "Invalid Parameters received, please checkout the api documentation",
+     * "object": []
+     * }
+     * }
+     *
+     *
+     * @apiErrorExample Error-Response Invalid Json Object:
+     * {"ReaxiumResponse": {
+     * "code": 2,
+     * "message": "Invalid Parameters received, please checkout the api documentation",
+     * "object": []
+     * }
+     * }
+     */
+    public function deviceTrafficStatus()
+    {
+        Log::info("Device user traffic info");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+        Log::info('Object received: ' . json_encode($jsonObject));
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
+            try {
+                if (isset($jsonObject['ReaxiumParameters']["ReaxiumDevice"])) {
+                    $this->loadModel("ReaxiumDevice");
+                    Log::info($jsonObject['ReaxiumParameters']);
+                    $deviceId = $jsonObject['ReaxiumParameters']["ReaxiumDevice"]['device_id'];
+                    if (isset($deviceId)) {
+                        $deviceTrafficInfo = $this->getDeviceTrafficInfo($deviceId);
+                        if (isset($deviceTrafficInfo)) {
+                            $response['ReaxiumResponse']['object'] = $deviceTrafficInfo;
+                            $response = parent::setSuccessfulResponse($response);
+                        } else {
+                            $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                            $response['ReaxiumResponse']['message'] = 'Device Not found';
+                        }
+                    } else {
+                        $response = parent::seInvalidParametersMessage($response);
+                    }
+                } else {
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+            } catch (\Exception $e) {
+                Log::info("Error: " . $e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+        } else {
+            $response = parent::setInvalidJsonMessage($response);
+        }
+        Log::info("Responde Object: " . json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
+    /**
+     *
+     * Get the daily information of the device traffic accesss
+     * @param $deviceId
+     * @return array
+     */
+    private function getDeviceTrafficInfo($deviceId){
+        $trafficTable = TableRegistry::get("Traffic");
+        $accessController = new AccessController();
+        $userAccessControlTable = TableRegistry::get("UserAccessControl");
+        $userWithAccessInDevice = $userAccessControlTable->findByDeviceId($deviceId)->contain("Users");
+        $userTrafficType = null;
+        $deviceTraffic['DeviceTrafficStatus']['IN'] = array();
+        $deviceTraffic['DeviceTrafficStatus']['OUT'] = array();
+        if(isset($userWithAccessInDevice)){
+            foreach($userWithAccessInDevice as $user){
+                $userTrafficType = $accessController->getUserLastTraffic($user['user_id'],$trafficTable);
+                if(isset($userTrafficType) && $userTrafficType['traffic_type_id'] == 1){
+                    $user['user']['trafficDate'] = $userTrafficType['datetime'];
+                    array_push($deviceTraffic['DeviceTrafficStatus']['IN'],$user['user']);
+                }else{
+                    if(isset($userTrafficType['datetime'])){
+                        $user['user']['trafficDate'] = $userTrafficType['datetime'];
+                    }else{
+                        $user['user']['trafficDate'] = null;
+                    }
+                    array_push($deviceTraffic['DeviceTrafficStatus']['OUT'],$user['user']);
+                }
+            }
+        }else{
+            $deviceTraffic = null;
+        }
+        return $deviceTraffic;
+    }
+
 
 
 }

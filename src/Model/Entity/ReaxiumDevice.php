@@ -22,8 +22,7 @@ class ReaxiumDevice extends Entity
      * @var array
      */
     protected $_accessible = [
-        '*' => true,
-        'device_id' => false,
+        '*' => true
     ];
 
 

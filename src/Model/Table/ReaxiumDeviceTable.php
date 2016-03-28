@@ -10,8 +10,7 @@ use Cake\ORM\Table;
  * Date: 18/03/2016
  * Time: 12:51 PM
  */
-class ReaxiumDeviceTable extends Table
-{
+class ReaxiumDeviceTable extends Table{
 
     /**
      * Relacion entre la Tabla reaxium_device con el modelo ORM de Cake
