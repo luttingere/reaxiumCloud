@@ -19,7 +19,7 @@ class AccessController extends ReaxiumAPIController
 
 
     /**
-     * @api {post} /Access/createDeviceAccess CreateAnAccessForADevice
+     * @api {post} /Access/createDeviceAccess Create A Security Access For A Reaxium Device
      * @apiName createDeviceAccess
      * @apiGroup AccessControl
      *
@@ -111,7 +111,7 @@ class AccessController extends ReaxiumAPIController
     }
 
     /**
-     * @api {post} /Access/checkDeviceInformation validateIfTheDeviceHaveAccess
+     * @api {post} /Access/checkDeviceInformation Login to the system with a Device
      * @apiName checkDeviceInformation
      * @apiGroup AccessControl
      *
@@ -269,7 +269,7 @@ class AccessController extends ReaxiumAPIController
 
 
     /**
-     * @api {post} /Access/createUserAccess CreateAnAccessForAUser
+     * @api {post} /Access/createUserAccess Create A Security  Access For A User
      * @apiName createUserAccess
      * @apiGroup AccessControl
      *
@@ -289,19 +289,19 @@ class AccessController extends ReaxiumAPIController
      * @apiSuccessExample Success-Response:
      *     HTTP/1.1 200 OK
      *     {
-     * "ReaxiumResponse": {
-     * "code": 0,
-     * "message": "SAVED SUCCESSFUL",
-     * "object": {
-     * "device_id": 1,
-     * "user_id": 1,
-     * "access_type_id": 1,
-     * "user_login_name": "reaxiumUser",
-     * "user_password": "reaxiumPassword",
-     * "access_id": 1
-     * }
-     * }
-     * }
+     *      "ReaxiumResponse": {
+     *          "code": 0,
+     *          "message": "SAVED SUCCESSFUL",
+     *          "object": {
+     *          "device_id": 1,
+     *          "user_id": 1,
+     *          "access_type_id": 1,
+     *          "user_login_name": "reaxiumUser",
+     *          "user_password": "reaxiumPassword",
+     *          "access_id": 1
+     *          }
+     *       }
+     *  }
      *
      *
      * @apiErrorExample Error-Response: User Access already exists
@@ -364,7 +364,7 @@ class AccessController extends ReaxiumAPIController
     }
 
     /**
-     * @api {post} /Access/checkUserAccessInformation validateIfTheUserHaveAccess
+     * @api {post} /Access/checkUserAccessInformation Login to the system with a User
      * @apiName checkDeviceInformation
      * @apiGroup AccessControl
      *

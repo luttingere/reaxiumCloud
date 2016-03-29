@@ -16,7 +16,7 @@ class UsersController extends ReaxiumAPIController
 {
 
     /**
-     * @api {post} /Users/createUser CreateANewUser
+     * @api {post} /Users/createUser Create A New User in the system
      * @apiName createUser
      * @apiGroup Users
      *
@@ -41,7 +41,7 @@ class UsersController extends ReaxiumAPIController
      *          "message": "SAVED SUCCESSFUL",
      *          "object": [{
      *              "user_id":"1",
-     * "document_id": "19055085",
+     *              "document_id": "19055085",
      *              "first_name": "Jhon",
      *              "second_name": "Andrew",
      *              "first_last_name": "Doe",
@@ -116,7 +116,7 @@ class UsersController extends ReaxiumAPIController
     }
 
     /**
-     * @api {post} /Users/userInfo getUserInformation
+     * @api {post} /Users/userInfo get A User Information by ID
      * @apiName userInfo
      * @apiGroup Users
      *
@@ -254,7 +254,7 @@ class UsersController extends ReaxiumAPIController
 
 
     /**
-     * @api {post} /Users/deleteUser DeleteAUserFromSystem
+     * @api {post} /Users/deleteUser Delete A User From the System
      * @apiName deleteUser
      * @apiGroup Users
      *
@@ -354,7 +354,7 @@ class UsersController extends ReaxiumAPIController
 
 
     /**
-     * @api {post} /Users/changeUserStatus ChangeTheStatusOfAUser
+     * @api {post} /Users/changeUserStatus Change The Status Of A User
      * @apiName changeUserStatus
      * @apiGroup Users
      *

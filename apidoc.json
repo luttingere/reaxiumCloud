@@ -1,7 +1,7 @@
 {
   "name": "Rexaium Cloud",
   "version": "0.1.0",
-  "description": "Reaxium Web Services system hosted in a cloud",
-  "title": "Rexium Cloud",
-  "url" : "https://api.github.com/v1"
+  "description": "Network cloud services for modeling a system access contro",
+  "title": "Reaxium Cloud Services",
+  "url" : "http://54.200.133.84/reaxium"
  }

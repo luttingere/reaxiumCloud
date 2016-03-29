@@ -21,6 +21,6 @@ class DeviceAccessControl extends Entity
      */
     protected $_accessible = [
         '*' => true,
-        'access_device_control_id' => false,
+        'access_device_control_id' => false
     ];
 }

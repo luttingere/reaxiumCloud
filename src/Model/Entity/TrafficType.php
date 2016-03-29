@@ -13,7 +13,7 @@ use Cake\ORM\Entity;
 class TrafficType extends Entity {
 
     protected $_accessible = [
-        '*' => true,
+        '*' => true
     ];
 
 }

@@ -18,18 +18,19 @@ class DeviceController extends ReaxiumAPIController
 {
 
     /**
-     * @api {post} /Device/deviceInfo getDeviceInformation
+     * @api {post} /Device/deviceInfo Get a Device Information by ID
      * @apiName deviceInfo
      * @apiGroup Device
      *
      * @apiParamExample {json} Request-Example:
      *
-     * {"ReaxiumParameters": {
-     * "ReaxiumDevice": {
-     * "device_id": "1"
-     * }
-     * }
-     * }
+     * {
+     *  "ReaxiumParameters": {
+     *      "ReaxiumDevice": {
+     *          "device_id": "1"
+     *           }
+     *      }
+     *  }
      *
      * @apiSuccessExample Success-Response:
      *     HTTP/1.1 200 OK
@@ -52,30 +53,33 @@ class DeviceController extends ReaxiumAPIController
      *
      *
      * @apiErrorExample Error-Response Device Not Found:
-     * {"ReaxiumResponse": {
-     * "code": 404,
-     * "message": "Device Not found",
-     * "object": []
-     * }
-     * }
+     * {
+     *  "ReaxiumResponse": {
+     *      "code": 404,
+     *      "message": "Device Not found",
+     *      "object": []
+     *      }
+     *  }
      *
      *
      * @apiErrorExample Error-Response Invalid Parameters:
-     * {"ReaxiumResponse": {
-     * "code": 2,
-     * "message": "Invalid Parameters received, please checkout the api documentation",
-     * "object": []
-     * }
-     * }
+     * {
+     *  "ReaxiumResponse": {
+     *      "code": 2,
+     *      "message": "Invalid Parameters received, please checkout the api documentation",
+     *      "object": []
+     *      }
+     *  }
      *
      *
      * @apiErrorExample Error-Response Invalid Json Object:
-     * {"ReaxiumResponse": {
-     * "code": 2,
-     * "message": "Invalid Parameters received, please checkout the api documentation",
-     * "object": []
-     * }
-     * }
+     * {
+     *  "ReaxiumResponse": {
+     *      "code": 2,
+     *      "message": "Invalid Parameters received, please checkout the api documentation",
+     *      "object": []
+     *       }
+     *     }
      */
     public function deviceInfo()
     {
@@ -139,7 +143,7 @@ class DeviceController extends ReaxiumAPIController
 
 
     /**
-     * @api {get} /Device/allDeviceInfo getAllDevicesInSystem
+     * @api {get} /Device/allDeviceInfo get all devices in the system
      * @apiName allDevicesInfo
      * @apiGroup Device
      *
@@ -175,12 +179,13 @@ class DeviceController extends ReaxiumAPIController
      *
      *
      * @apiErrorExample Error-Response No Deices Found:
-     * {"ReaxiumResponse": {
-     * "code": 404,
-     * "message": "No Deices Found",
-     * "object": []
-     * }
-     * }
+     * {
+     *  "ReaxiumResponse": {
+     *      "code": 404,
+     *      "message": "No Deices Found",
+     *      "object": []
+     *      }
+     *   }
      *
      */
     public function allDevicesInfo()
@@ -225,43 +230,44 @@ class DeviceController extends ReaxiumAPIController
 
 
     /**
-     * @api {post} /Device/createDevice CreateNewDevice
+     * @api {post} /Device/createDevice Create a new Reaxium Device
      * @apiName createDevice
      * @apiGroup Device
      *
      * @apiParamExample {json} Request-Example:
-     *   {"ReaxiumParameters": {
-     * "ReaxiumDevice": {
-     * "device_name": "Another Device",
-     * "device_description": "Device working for Florida School"
-     * }
-     * }
-     * }
+     *   {
+     *      "ReaxiumParameters": {
+     *      "ReaxiumDevice": {
+     *          "device_name": "Another Device",
+     *          "device_description": "Device working for Florida School"
+     *          }
+     *      }
+     *  }
      *
      *
      * @apiSuccessExample Success-Response:
-     *     HTTP/1.1 200 OK
-     *     {
-     * "ReaxiumResponse": {
-     * "code": 0,
-     * "message": "SAVED SUCCESSFUL",
-     * "object": {
-     * "device_name": "Another Device",
-     * "device_description": "Device working for Florida School",
-     * "device_id": 18
-     * }
-     * }
-     * }
+     *   HTTP/1.1 200 OK
+     *    {
+     *     "ReaxiumResponse": {
+     *       "code": 0,
+     *       "message": "SAVED SUCCESSFUL",
+     *       "object": {
+     *          "device_name": "Another Device",
+     *          "device_description": "Device working for Florida School",
+     *          "device_id": 18
+     *          }
+     *      }
+     *  }
      *
      *
      * @apiErrorExample Error-Response: Device already exist
      *  {
-     * "ReaxiumResponse": {
-     * "code": 101,
-     * "message": "Device name already exist in the system",
-     * "object": []
-     * }
-     * }
+     *      "ReaxiumResponse": {
+     *          "code": 101,
+     *          "message": "Device name already exist in the system",
+     *          "object": []
+     *          }
+     *      }
      *
      */
     public function createDevice()
@@ -316,7 +322,7 @@ class DeviceController extends ReaxiumAPIController
 
 
     /**
-     * @api {post} /Device/deleteDevice DeleteADeviceFromSystem
+     * @api {post} /Device/deleteDevice Delete a device from the system
      * @apiName deleteDevice
      * @apiGroup Device
      *
@@ -425,7 +431,7 @@ class DeviceController extends ReaxiumAPIController
 
 
     /**
-     * @api {post} /Device/associateAnApplicationWithADevice AssociateAnApplicationWithADevice
+     * @api {post} /Device/associateAnApplicationWithADevice Associate An Application With a Device
      * @apiName associateAnApplicationWithADevice
      * @apiGroup Device
      *
@@ -516,7 +522,7 @@ class DeviceController extends ReaxiumAPIController
 
 
     /**
-     * @api {post} /Device/changeDeviceStatus ChangeTheStatusOfADevice
+     * @api {post} /Device/changeDeviceStatus Change The Status Of A Device
      * @apiName changeDeviceStatus
      * @apiGroup Device
      *
@@ -620,7 +626,7 @@ class DeviceController extends ReaxiumAPIController
 
 
     /**
-     * @api {post} /Device/deviceTrafficStatus getDeviceTrafficStatus
+     * @api {post} /Device/deviceTrafficStatus get Device's Traffic Status
      * @apiName deviceTrafficStatus
      * @apiGroup Device
      *
@@ -669,30 +675,33 @@ class DeviceController extends ReaxiumAPIController
      *
      *
      * @apiErrorExample Error-Response Device Not Found:
-     * {"ReaxiumResponse": {
-     * "code": 404,
-     * "message": "Device Not found",
-     * "object": []
-     * }
-     * }
+     * {
+     *  "ReaxiumResponse": {
+     *      "code": 404,
+     *      "message": "Device Not found",
+     *      "object": []
+     *      }
+     *  }
      *
      *
      * @apiErrorExample Error-Response Invalid Parameters:
-     * {"ReaxiumResponse": {
-     * "code": 2,
-     * "message": "Invalid Parameters received, please checkout the api documentation",
-     * "object": []
-     * }
-     * }
+     * {
+     *  "ReaxiumResponse": {
+     *       "code": 2,
+     *       "message": "Invalid Parameters received, please checkout the api documentation",
+     *       "object": []
+     *      }
+     *   }
      *
      *
      * @apiErrorExample Error-Response Invalid Json Object:
-     * {"ReaxiumResponse": {
-     * "code": 2,
-     * "message": "Invalid Parameters received, please checkout the api documentation",
-     * "object": []
-     * }
-     * }
+     * {
+     *      "ReaxiumResponse": {
+     *          "code": 2,
+     *          "message": "Invalid Parameters received, please checkout the api documentation",
+     *          "object": []
+     *       }
+     *      }
      */
     public function deviceTrafficStatus()
     {

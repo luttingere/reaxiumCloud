@@ -22,7 +22,7 @@ class UserAccessControl extends Entity
      */
     protected $_accessible = [
         '*' => true,
-        'access_id' => false,
+        'access_id' => false
     ];
 
 }

@@ -18,17 +18,18 @@ class ApplicationsController extends ReaxiumAPIController
 {
 
     /**
-     * @api {post} /Applications/applicationInfo getApplicationInformation
+     * @api {post} /Applications/applicationInfo get Application Information by ID
      * @apiName applicationInfo
      * @apiGroup Applications
      *
      * @apiParamExample {json} Request-Example:
      *
-     * {"ReaxiumParameters": {
-     * "Applications": {
-     * "application_id": "1"
-     * }
-     * }
+     * {
+     *  "ReaxiumParameters": {
+     *      "Applications": {
+     *      "application_id": "1"
+     *      }
+     *    }
      * }
      *
      * @apiSuccessExample Success-Response:
@@ -46,30 +47,33 @@ class ApplicationsController extends ReaxiumAPIController
      *           }
      *
      * @apiErrorExample Error-Response Application Not Found:
-     * {"ReaxiumResponse": {
-     * "code": 404,
-     * "message": "Application Not found",
-     * "object": []
-     * }
-     * }
+     * {
+     *  "ReaxiumResponse": {
+     *      "code": 404,
+     *      "message": "Application Not found",
+     *      "object": []
+     *      }
+     *  }
      *
      *
      * @apiErrorExample Error-Response Invalid Parameters:
-     * {"ReaxiumResponse": {
-     * "code": 2,
-     * "message": "Invalid Parameters received, please checkout the api documentation",
-     * "object": []
-     * }
-     * }
+     * {
+     *      "ReaxiumResponse": {
+     *      "code": 2,
+     *      "message": "Invalid Parameters received, please checkout the api documentation",
+     *      "object": []
+     *      }
+     *  }
      *
      *
      * @apiErrorExample Error-Response Invalid Json Object:
-     * {"ReaxiumResponse": {
-     * "code": 3,
-     * "message": "Invalid Json Object",
-     * "object": []
-     * }
-     * }
+     * {
+     *  "ReaxiumResponse": {
+     *      "code": 3,
+     *      "message": "Invalid Json Object",
+     *      "object": []
+     *      }
+     *  }
      */
     public function applicationInfo()
     {
@@ -132,7 +136,7 @@ class ApplicationsController extends ReaxiumAPIController
 
 
     /**
-     * @api {get} /Applications/allApplicationInfo getAllApplicationInformation
+     * @api {get} /Applications/allApplicationInfo get All Application in the system
      * @apiName allApplicationInfo
      * @apiGroup Applications
      *
@@ -163,11 +167,12 @@ class ApplicationsController extends ReaxiumAPIController
      *
      *
      * @apiErrorExample Error-Response No Applications Found:
-     * {"ReaxiumResponse": {
-     * "code": 404,
-     * "message": "No Applications Found",
-     * "object": []
-     * }
+     * {
+     *   "ReaxiumResponse": {
+     *   "code": 404,
+     *   "message": "No Applications Found",
+     *   "object": []
+     *   }
      * }
      *
      */
@@ -213,44 +218,44 @@ class ApplicationsController extends ReaxiumAPIController
 
 
     /**
-     * @api {post} /Applications/createApplication CreateANewApplications
+     * @api {post} /Applications/createApplication Create A New Application in the system
      * @apiName createApplication
      * @apiGroup Applications
      *
      * @apiParamExample {json} Request-Example:
      *   {"ReaxiumParameters": {
-     * "ReaxiumDevice": {
-     * "device_name": "Another Application",
-     * "version": "1.0"
-     * }
-     * }
+     *      "Applications": {
+     *      "application_name": "Another Application",
+     *      "version": "1.0"
+     *     }
+     *   }
      * }
      *
      *
      * @apiSuccessExample Success-Response:
      *     HTTP/1.1 200 OK
      *     {
-     * "ReaxiumResponse": {
-     * "code": 0,
-     * "message": "SAVED SUCCESSFUL",
-     * "object": {
-     * "device_name": "Another Application",
-     * "version": "1.0",
-     * "application_id": 1
-     * "status_id": 1
-     * }
-     * }
-     * }
+     *      "ReaxiumResponse": {
+     *          "code": 0,
+     *          "message": "SAVED SUCCESSFUL",
+     *          "object": {
+     *          "application_name": "Another Application",
+     *          "version": "1.0",
+     *          "application_id": 1
+     *          "status_id": 1
+     *          }
+     *      }
+     *  }
      *
      *
      * @apiErrorExample Error-Response: Application already exist
      *  {
-     * "ReaxiumResponse": {
-     * "code": 101,
-     * "message": "Application name already exist in the system",
-     * "object": []
-     * }
-     * }
+     *      "ReaxiumResponse": {
+     *           "code": 101,
+     *          "message": "Application name already exist in the system",
+     *          "object": []
+     *      }
+     *  }
      *
      */
     public function createAnApplication()
@@ -305,7 +310,7 @@ class ApplicationsController extends ReaxiumAPIController
 
 
     /**
-     * @api {post} /Applications/deleteApplication DeleteAnApplicationFromSystem
+     * @api {post} /Applications/deleteApplication Delete An Application From System
      * @apiName deleteApplication
      * @apiGroup Applications
      *
@@ -411,7 +416,7 @@ class ApplicationsController extends ReaxiumAPIController
     }
 
     /**
-     * @api {post} /Applications/changeApplicationStatus ChangeTheStatusOfAnApplication
+     * @api {post} /Applications/changeApplicationStatus Change The Status Of An Application
      * @apiName changeApplicationStatus
      * @apiGroup Applications
      *
@@ -502,7 +507,7 @@ class ApplicationsController extends ReaxiumAPIController
 
 
     /**
-     * @api {post} /Applications/changeApplicationVersion ChangeTheVersionOfAnApplication
+     * @api {post} /Applications/changeApplicationVersion Change The Version Of An Application
      * @apiName changeApplicationVersion
      * @apiGroup Applications
      *

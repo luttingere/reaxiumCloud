@@ -21,6 +21,6 @@ class AccessType extends Entity
      */
     protected $_accessible = [
         '*' => true,
-        'access_type_id' => false,
+        'access_type_id' => false
     ];
 }

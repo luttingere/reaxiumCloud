@@ -1,5 +1,6 @@
 <?php
 namespace App\Util;
+use Cake\Log\Log;
 
 /**
  * Created by PhpStorm.
@@ -9,6 +10,11 @@ namespace App\Util;
  */
 class ReaxiumUtil
 {
+
+    public static function getDate($dateAsString){
+        $date = new \DateTime($dateAsString);
+        return $date->format("Y-m-d H:i:s");
+    }
 
 
 }
