@@ -8,6 +8,7 @@
 
 namespace App\Controller;
 
+use Cake\Event\Event;
 use Cake\Log\Log;
 use App\Util\ReaxiumApiMessages;
 
@@ -16,6 +17,10 @@ class ReaxiumAPIController extends AppController
 
     private  $reaxiumResponseObject = array("ReaxiumResponse" => array("code"=>"","message"=>"","object"=>array()));
 
+    public function beforeFilter(Event $event) {
+        parent::beforeFilter($event);
+        $this->response->header(array('Access-Control-Allow-Origin' => '*'));
+    }
 
     public function handleError($code, $description, $file = null, $line = null, $context = null) {
         Log::info("Handling the error fuck");

@@ -20,7 +20,6 @@ class AccessType extends Entity
      * @var array
      */
     protected $_accessible = [
-        '*' => true,
-        'access_type_id' => false
+        '*' => true
     ];
 }

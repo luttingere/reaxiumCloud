@@ -18,6 +18,22 @@ class UsersTable extends Table
         $this->table('users');
         $this->primaryKey("user_id");
         $this->belongsTo("Status", array('foreignKey' => 'status_id'));
+        $this->belongsTo("UserType", array('foreignKey' => 'user_type_id'));
+
+        $this->belongsToMany('PhoneNumbers',
+            array('targetForeignKey' => 'phone_number_id',
+                'foreignKey' => 'user_id',
+                'joinTable' => 'phone_numbers_relationship'));
+
+        $this->belongsToMany('Address',
+            array('targetForeignKey' => 'address_id',
+                'foreignKey' => 'user_id',
+                'joinTable' => 'address_relationship'));
+
+        $this->belongsToMany('Stakeholders',
+            array('targetForeignKey' => 'stakeholder_id',
+                'foreignKey' => 'user_id',
+                'joinTable' => 'users_relationship'));
     }
 
 }

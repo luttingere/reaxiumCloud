@@ -8,10 +8,9 @@
 
 namespace App\Controller;
 
-use Cake\Core\Exception\Exception;
+use App\Util\ReaxiumApiMessages;
 use Cake\Log\Log;
 use Cake\ORM\TableRegistry;
-use App\Util\ReaxiumApiMessages;
 
 
 class AccessController extends ReaxiumAPIController
@@ -440,19 +439,23 @@ class AccessController extends ReaxiumAPIController
                             'user_password' => $access->user_password);
                         $accessFound = $this->getUserAccessInfo($arrayOfConditions);
                         if (isset($accessFound)) {
-                            Log::info($accessFound);
-                            $trafficTable = TableRegistry::get("Traffic");
-                            $userId = $accessFound[0]['user_id'];
-                            $accessId = $accessFound[0]['access_id'];
-                            $deviceId = $accessFound[0]['device_id'];
-                            $lastTraffic = $this->getUserLastTraffic($userId, $trafficTable);
-                            Log::info("lastTraffic: ".$lastTraffic);
-                            if ($lastTraffic == NULL || ($lastTraffic['traffic_type_id'] == 2)) {
-                                Log::info("El usuario: " . $userId . " No tiene traficos el dia de hoy");
-                                $this->registerTraffic($userId, 1, $accessId, $deviceId,ReaxiumApiMessages::$SUCCESS_ACCESS);
-                            } else {
-                                $this->registerTraffic($userId, 2, $accessId, $deviceId,ReaxiumApiMessages::$SUCCESS_ACCESS);
+                            $userController = new UsersController();
+                            $user = $userController->getUser($accessFound[0]['user_id']);
+                            if($user[0]['user_type_id'] != 1){
+                                $trafficTable = TableRegistry::get("Traffic");
+                                $userId = $accessFound[0]['user_id'];
+                                $accessId = $accessFound[0]['access_id'];
+                                $deviceId = $accessFound[0]['device_id'];
+                                $lastTraffic = $this->getUserLastTraffic($userId, $trafficTable);
+                                Log::info("lastTraffic: ".$lastTraffic);
+                                if ($lastTraffic == NULL || ($lastTraffic['traffic_type_id'] == 2)) {
+                                    Log::info("El usuario: " . $userId . " No tiene traficos el dia de hoy");
+                                    $this->registerTraffic($userId, 1, $accessId, $deviceId,ReaxiumApiMessages::$SUCCESS_ACCESS);
+                                } else {
+                                    $this->registerTraffic($userId, 2, $accessId, $deviceId,ReaxiumApiMessages::$SUCCESS_ACCESS);
+                                }
                             }
+                            $accessFound[0]['UserData'] = $user;
                             $response['ReaxiumResponse']['object'] = $accessFound;
                             $response = parent::setSuccessAccess($response);
                         } else {
@@ -486,7 +489,7 @@ class AccessController extends ReaxiumAPIController
     private function getUserAccessInfo($arrayOfConditions)
     {
         $access = TableRegistry::get("UserAccessControl");
-        $access = $access->find()->where($arrayOfConditions)->contain(array("Status", "Users", "ReaxiumDevice", "AccessType"));
+        $access = $access->find()->where($arrayOfConditions)->contain(array("Status", "ReaxiumDevice", "AccessType"));
         if ($access->count() > 0) {
             $access = $access->toArray();
         } else {
