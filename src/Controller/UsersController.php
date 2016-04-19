@@ -914,7 +914,9 @@ class UsersController extends ReaxiumAPIController
         $this->Users->updateAll($arrayFields, $arrayConditions);
     }
 
-
+    /**
+     * Service for get type user
+     */
     public function usersTypeList(){
         Log::info("Looking for the users type list ");
         parent::setResultAsAJson();
@@ -932,5 +934,6 @@ class UsersController extends ReaxiumAPIController
         }
         return $typeUserList;
     }
+
 
 }

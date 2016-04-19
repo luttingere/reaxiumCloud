@@ -30,7 +30,15 @@ class ReaxiumApiMessages
     public static $INVALID_JSON_HEADER_CODE = 04;
     public static $INVALID_JSON_HEADER_MESSAGE = 'Invalid Json Header';
 
+    public static $INVALID_USER_ACCESS_CODE = 05;
+    public static $INVALID_USER_ACCESS_MESSAGE = 'Invalid User';
+
+    public static $INVALID_USER_STATUS_CODE = 06;
+    public static $INVALID_USER_STATUS_MESSAGE = 'Invalid Status User';
+
     public static $NOT_FOUND_CODE = 404;
     public static $CANNOT_SAVE = 101;
+
+    public static $CODE_VALIDATE_STATUS = 1;
 
 }

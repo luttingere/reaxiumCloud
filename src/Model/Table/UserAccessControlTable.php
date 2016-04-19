@@ -7,18 +7,13 @@ use Cake\ORM\Table;
  * Date: 22/03/2016
  * Time: 04:21 AM
  */
-class UserAccessControlTable extends Table
-{
+class UserAccessControlTable extends Table{
 
-    public function initialize(array $config)
-    {
+    public function initialize(array $config){
         parent::initialize($config);
         $this->table('users_access_control');
         $this->primaryKey('access_id');
         $this->belongsTo('Status', array('foreignKey' => 'status_id'));
-        $this->belongsTo('AccessType', array('foreignKey' => 'access_type_id'));
-        $this->belongsTo('ReaxiumDevice', array('foreignKey' => 'device_id'));
-        $this->belongsTo('Users', array('foreignKey' => 'user_id'));
     }
 
 
