@@ -534,7 +534,7 @@ class AccessController extends ReaxiumAPIController
      *          "ReaxiumParameters": {
      *          "UserAccessData": {
      *          "device_id": "1",
-     *          "access_type_id": "1,
+     *          "access_type_id": "1",
      *          "user_login_name":"reaxiumUser",
      *          "user_password":"reaxiumPassword"
      *          }

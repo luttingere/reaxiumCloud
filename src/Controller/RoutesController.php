@@ -18,7 +18,7 @@ class RoutesController extends ReaxiumAPIController{
 
 
     /**
-     * @api {post} /Routes/deviceGetRoutes all routes relationship by device
+     * @api {post} /Routes/deviceGetRoutes get all routes relationship by device
      * @apiName deviceGetRoutes
      * @apiGroup Routes
      *
