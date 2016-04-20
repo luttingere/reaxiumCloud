@@ -19,7 +19,7 @@ class UsersTable extends Table
         $this->primaryKey("user_id");
         $this->belongsTo("Status", array('foreignKey' => 'status_id'));
         $this->belongsTo("UserType", array('foreignKey' => 'user_type_id'));
-
+        $this->belongsTo("Business", array('foreignKey' => 'business_id'));
         $this->belongsToMany('PhoneNumbers',
             array('targetForeignKey' => 'phone_number_id',
                 'foreignKey' => 'user_id',

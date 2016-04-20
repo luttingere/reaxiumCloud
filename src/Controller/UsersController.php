@@ -465,12 +465,12 @@ class UsersController extends ReaxiumAPIController
     }
 
     /**
- *
- * obtain all de information related to an specific User id
- *
- * @param $arrayConditions
- * @return \Cake\ORM\Table  --User information
- */
+     *
+     * obtain all de information related to an specific User id
+     *
+     * @param $arrayConditions
+     * @return \Cake\ORM\Table  --User information
+     */
     private function getUserInfo($arrayConditions)
     {
         $usersTable = TableRegistry::get("Users");
@@ -491,7 +491,7 @@ class UsersController extends ReaxiumAPIController
     public function getUser($userId)
     {
         $usersTable = TableRegistry::get("Users");
-        $user = $usersTable->find()->where(array('user_id'=>$userId))->contain(array("Status", "PhoneNumbers", "UserType", "Address"));
+        $user = $usersTable->find()->where(array('user_id' => $userId))->contain(array("Status", "PhoneNumbers", "UserType", "Address"));
         if ($user->count() > 0) {
             $user = $user->toArray();
             if ($user[0]['user_type_id'] == 3) {
@@ -613,7 +613,7 @@ class UsersController extends ReaxiumAPIController
         $response = parent::getDefaultReaxiumMessage();
         try {
             $userTable = TableRegistry::get('Users');
-            $userFound = $userTable->find()->contain(array("Status","UserType"))->order(array('first_name', 'first_last_name'));
+            $userFound = $userTable->find()->contain(array("Status", "UserType"))->order(array('first_name', 'first_last_name'));
             if ($userFound->count() > 0) {
                 $userFound = $userFound->toArray();
                 $response['ReaxiumResponse']['object'] = $userFound;
@@ -629,6 +629,112 @@ class UsersController extends ReaxiumAPIController
         Log::info("Responde Object: " . json_encode($response));
         $this->response->body(json_encode($response));
     }
+
+    /**
+     * @api {post} /Users/allUsersInfoWithPagination all the information of system users showed by page
+     * @apiName allUsersInfoWithPagination
+     * @apiGroup Users
+     *
+     *       {
+     *        "ReaxiumParameters": {
+     *          "Users": {
+     *              "page": "1",
+     *              "limit": "10"
+     *              "sortDir": "desc",
+     *              "sortedBy": "first_name"
+     *              }
+     *            }
+     *         }
+     *
+     * @apiSuccessExample Success-Response:
+     *     HTTP/1.1 200 OK
+     *      "ReaxiumResponse": {
+     *          "code": 0,
+     *          "message": "SUCCESSFUL REQUEST",
+     *          "object": [{
+     *              "user_id":"1",
+     *              "document_id": "19055085",
+     *              "first_name": "Jhon",
+     *              "second_name": "Andrew",
+     *              "first_last_name": "Doe",
+     *              "second_last_name":"Smith"
+     *              "status_id":"1"
+     *              "status":{
+     *                  "status_id":"1",
+     *                  "status_name":"Active"
+     *                  }
+     *              }]
+     *          }
+     *      }
+     *
+     *
+     * @apiErrorExample Error-Response Not Found:
+     *          {"ReaxiumResponse": {
+     *              "code": 404,
+     *              "message": "No users found",
+     *              "object": []
+     *                  }
+     *                }
+     */
+    public function allUsersInfoWithPagination()
+    {
+        Log::info("All User information eith pagination Service invoked");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
+            Log::info('Object received: ' . json_encode($jsonObject));
+            try {
+                if (isset($jsonObject['ReaxiumParameters']["page"])) {
+
+                    $page = $jsonObject['ReaxiumParameters']["page"];
+                    $sortedBy = !isset($jsonObject['ReaxiumParameters']["sortedBy"])? 'first_last_name':$jsonObject['ReaxiumParameters']["sortedBy"];
+                    $sortDir = !isset($jsonObject['ReaxiumParameters']["sortDir"])? 'desc':$jsonObject['ReaxiumParameters']["sortDir"];
+                    $filter = !isset($jsonObject['ReaxiumParameters']["filter"])? '':$jsonObject['ReaxiumParameters']["filter"];
+                    $limit = !isset($jsonObject['ReaxiumParameters']["limit"])? 10:$jsonObject['ReaxiumParameters']["limit"];
+
+                    $userTable = TableRegistry::get('Users');
+
+                    if(trim($filter) != '' ){
+                        $whereCondition = array(array('OR' => array(
+                            array('first_name LIKE' => '%' . $filter . '%'),
+                            array('first_last_name LIKE' => '%' . $filter . '%'),
+                            array('document_id LIKE' => '%' . $filter . '%')
+                        )));
+                        $userFound = $userTable->find()->where($whereCondition)->contain(array("Status", "UserType"))->order(array($sortedBy.' '.$sortDir));
+                    }else{
+                        $userFound = $userTable->find()->contain(array("Status", "UserType"))->order(array($sortedBy.' '.$sortDir));
+                    }
+
+                    $count = $userFound->count();
+                    $this->paginate = array('limit' => $limit, 'page' => $page);
+                    $userFound = $this->paginate($userFound);
+
+                    if ($userFound->count() > 0) {
+                        $maxPages = floor((($count - 1) / $limit) + 1);
+                        $userFound = $userFound->toArray();
+                        $response['ReaxiumResponse']['totalRecords'] = $count;
+                        $response['ReaxiumResponse']['totalPages'] = $maxPages;
+                        $response['ReaxiumResponse']['object'] = $userFound;
+                        $response = parent::setSuccessfulResponse($response);
+                    } else {
+                        $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                        $response['ReaxiumResponse']['message'] = 'No Users found';
+                    }
+                } else {
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+            } catch (\Exception $e) {
+                Log::info("Error getting the user " . $e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+        } else {
+            $response = parent::setInvalidJsonMessage($response);
+        }
+        Log::info("Responde Object: " . json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
 
     /**
      * @api {post} /Users/allUsersWithFilter search a user by a filter
