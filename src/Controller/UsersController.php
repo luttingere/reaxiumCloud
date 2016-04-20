@@ -1020,5 +1020,26 @@ class UsersController extends ReaxiumAPIController
         $this->Users->updateAll($arrayFields, $arrayConditions);
     }
 
+    /**
+     * Service for get type user
+     */
+    public function usersTypeList(){
+        Log::info("Looking for the users type list ");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $response['ReaxiumResponse']['object'] = $this->getTypeUsersList();
+        $this->response->body(json_encode($response));
+    }
+
+
+    private function getTypeUsersList(){
+        $typeUserTable= TableRegistry::get("UserType");
+        $typeUserList = $typeUserTable->find()->order(array("user_type_name"));
+        if ($typeUserList->count() > 0) {
+            $typeUserList = $typeUserList->toArray();
+        }
+        return $typeUserList;
+    }
+
 
 }
