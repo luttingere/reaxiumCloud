@@ -36,6 +36,16 @@ class ReaxiumApiMessages
     public static $INVALID_USER_STATUS_CODE = 06;
     public static $INVALID_USER_STATUS_MESSAGE = 'Invalid Status User';
 
+    public static $DEVICE_ALREADY_CONFIGURED_CODE = 07;
+    public static $DEVICE_ALREADY_CONFIGURED_MESSAGE = 'Device id already configured in a device';
+
+    public static $DEVICE_NOT_CONFIGURED_CODE = 8;
+    public static $DEVICE_NOT_CONFIGURED_MESSAGE = 'Device id not configured in a device';
+
+    public static $INVALID_STATUS_CODE = 9;
+    public static $INVALID_STATUS_MESSAGE = 'Device with invalid status in system';
+
+
     public static $NOT_FOUND_CODE = 404;
     public static $CANNOT_SAVE = 101;
 

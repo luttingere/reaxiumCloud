@@ -624,7 +624,6 @@ class DeviceController extends ReaxiumAPIController
     }
 
 
-
     /**
      * @api {post} /Device/deviceTrafficStatus get Device's Traffic Status
      * @apiName deviceTrafficStatus
@@ -642,36 +641,36 @@ class DeviceController extends ReaxiumAPIController
      *
      * @apiSuccessExample Success-Response:
      *     HTTP/1.1 200 OK
-        {
-         "ReaxiumResponse": {
-            "code": 0,
-            "message": "SUCCESSFUL REQUEST",
-            "object": {
-                "DeviceTrafficStatus": {
-                    "IN": [{
-                        "user_id": 3,
-                        "document_id": "19055085",
-                        "first_name": "Jhon",
-                        "second_name": "Andrew",
-                        "first_last_name": "Doe",
-                        "second_last_name": "Smith",
-                        "status_id": 1,
-                        "trafficDate": "2016-03-28T19:11:46+0000"
-                        }],
-                    "OUT": [{
-                        "user_id": 1,
-                        "document_id": "19044081",
-                        "first_name": "Eduardo",
-                        "second_name": "Jose",
-                        "first_last_name": "Luttinger",
-                        "second_last_name": "Mogollon",
-                        "status_id": 1,
-                        "trafficDate": "2016-03-28T20:11:45+0000"
-                        }]
-                    }
-                }
-            }
-        }
+     * {
+     * "ReaxiumResponse": {
+     * "code": 0,
+     * "message": "SUCCESSFUL REQUEST",
+     * "object": {
+     * "DeviceTrafficStatus": {
+     * "IN": [{
+     * "user_id": 3,
+     * "document_id": "19055085",
+     * "first_name": "Jhon",
+     * "second_name": "Andrew",
+     * "first_last_name": "Doe",
+     * "second_last_name": "Smith",
+     * "status_id": 1,
+     * "trafficDate": "2016-03-28T19:11:46+0000"
+     * }],
+     * "OUT": [{
+     * "user_id": 1,
+     * "document_id": "19044081",
+     * "first_name": "Eduardo",
+     * "second_name": "Jose",
+     * "first_last_name": "Luttinger",
+     * "second_last_name": "Mogollon",
+     * "status_id": 1,
+     * "trafficDate": "2016-03-28T20:11:45+0000"
+     * }]
+     * }
+     * }
+     * }
+     * }
      *
      *
      * @apiErrorExample Error-Response Device Not Found:
@@ -748,7 +747,8 @@ class DeviceController extends ReaxiumAPIController
      * @param $deviceId
      * @return array
      */
-    private function getDeviceTrafficInfo($deviceId){
+    private function getDeviceTrafficInfo($deviceId)
+    {
         $trafficTable = TableRegistry::get("Traffic");
         $accessController = new AccessController();
         $userAccessControlTable = TableRegistry::get("UserAccessControl");
@@ -756,27 +756,343 @@ class DeviceController extends ReaxiumAPIController
         $userTrafficType = null;
         $deviceTraffic['DeviceTrafficStatus']['IN'] = array();
         $deviceTraffic['DeviceTrafficStatus']['OUT'] = array();
-        if(isset($userWithAccessInDevice)){
-            foreach($userWithAccessInDevice as $user){
-                $userTrafficType = $accessController->getUserLastTraffic($user['user_id'],$trafficTable);
-                if(isset($userTrafficType) && $userTrafficType['traffic_type_id'] == 1){
+        if (isset($userWithAccessInDevice)) {
+            foreach ($userWithAccessInDevice as $user) {
+                $userTrafficType = $accessController->getUserLastTraffic($user['user_id'], $trafficTable);
+                if (isset($userTrafficType) && $userTrafficType['traffic_type_id'] == 1) {
                     $user['user']['trafficDate'] = $userTrafficType['datetime'];
-                    array_push($deviceTraffic['DeviceTrafficStatus']['IN'],$user['user']);
-                }else{
-                    if(isset($userTrafficType['datetime'])){
+                    array_push($deviceTraffic['DeviceTrafficStatus']['IN'], $user['user']);
+                } else {
+                    if (isset($userTrafficType['datetime'])) {
                         $user['user']['trafficDate'] = $userTrafficType['datetime'];
-                    }else{
+                    } else {
                         $user['user']['trafficDate'] = null;
                     }
-                    array_push($deviceTraffic['DeviceTrafficStatus']['OUT'],$user['user']);
+                    array_push($deviceTraffic['DeviceTrafficStatus']['OUT'], $user['user']);
                 }
             }
-        }else{
+        } else {
             $deviceTraffic = null;
         }
         return $deviceTraffic;
     }
 
+
+    /**
+     * @api {post} /Device/configureDevice configure a device in  the server
+     * @apiName configureDevice
+     * @apiGroup Device
+     *
+     * @apiParamExample {json} Request-Example:
+     *
+     * {
+     *  "ReaxiumParameters": {
+     *      "ReaxiumDevice": {
+     *          "device_id": "1"
+     *          "device_token": "h3kj45h3k4h53kjhg43hg53hjg45345gkjhgd90fg0d9gf8dgknj"
+     *        }
+     *      }
+     *   }
+     *
+     * @apiSuccessExample Success-Response:
+     *     HTTP/1.1 200 OK
+     * {
+     *  "ReaxiumResponse": {
+     *  "code": 0,
+     *  "message": "DEVICE CONFIGURED SUCCESSFULLY",
+     *  "object": {}
+     * }
+     *  }
+     *
+     *
+     * @apiErrorExample Error-Response Device Not Found:
+     * {
+     *  "ReaxiumResponse": {
+     *      "code": 404,
+     *      "message": "Device Not found",
+     *      "object": []
+     *      }
+     *  }
+     *
+     * @apiErrorExample Error-Response Device Already Configured:
+     * {
+     *  "ReaxiumResponse": {
+     *      "code": 07,
+     *      "message": "Device already configured",
+     *      "object": []
+     *      }
+     *  }
+     *
+     *
+     * @apiErrorExample Error-Response Invalid Parameters:
+     * {
+     *  "ReaxiumResponse": {
+     *       "code": 2,
+     *       "message": "Invalid Parameters received, please checkout the api documentation",
+     *       "object": []
+     *      }
+     *   }
+     *
+     *
+     * @apiErrorExample Error-Response Invalid Json Object:
+     * {
+     *      "ReaxiumResponse": {
+     *          "code": 2,
+     *          "message": "Invalid Parameters received, please checkout the api documentation",
+     *          "object": []
+     *       }
+     *      }
+     */
+    public function configureDevice()
+    {
+        Log::info("Configuring a device service");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+        Log::info('Object received: ' . json_encode($jsonObject));
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
+            try {
+                if (isset($jsonObject['ReaxiumParameters']["ReaxiumDevice"])) {
+                    $deviceId = $jsonObject['ReaxiumParameters']["ReaxiumDevice"]['device_id'];
+                    $deviceToken = $jsonObject['ReaxiumParameters']["ReaxiumDevice"]['device_token'];
+                    if (isset($deviceId) && isset($deviceToken)) {
+                        $reaxiumDevice = $this->getDeviceInfo($deviceId);
+                        if (isset($reaxiumDevice)) {
+                            if ($reaxiumDevice[0]['configured'] == 0) {
+
+                                $fields = array('configured' => 1, 'device_token' => $deviceToken);
+                                $conditions = array('device_id' => $deviceId);
+                                $this->updateDevice($fields, $conditions);
+
+                                $reaxiumDevice[0]['configured'] = true;
+                                $reaxiumDevice[0]['device_token'] = $deviceToken;
+
+                                $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$SUCCESS_CODE;
+                                $response['ReaxiumResponse']['message'] = 'Device configured successfully';
+                                $response['ReaxiumResponse']['object'] = $reaxiumDevice;
+
+                            } else {
+                                $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$DEVICE_ALREADY_CONFIGURED_CODE;
+                                $response['ReaxiumResponse']['message'] = ReaxiumApiMessages::$DEVICE_ALREADY_CONFIGURED_MESSAGE;
+                            }
+                        } else {
+                            $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                            $response['ReaxiumResponse']['message'] = 'No device found with the id: ' . $deviceId;
+                        }
+                    } else {
+                        $response = parent::seInvalidParametersMessage($response);
+                    }
+                } else {
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+            } catch (\Exception $e) {
+                Log::info("Error: " . $e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+        } else {
+            $response = parent::setInvalidJsonMessage($response);
+        }
+        Log::info("Responde Object: " . json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
+
+    /**
+     * @api {post} /Device/synchronizeDeviceAccess synchronize a device in  with the server
+     * @apiName synchronizeDeviceAccess
+     * @apiGroup Device
+     *
+     * @apiParamExample {json} Request-Example:
+     *
+     * {
+     *  "ReaxiumParameters": {
+     *      "ReaxiumDevice": {
+     *          "device_id": "1"
+     *          "device_token": "h3kj45h3k4h53kjhg43hg53hjg45345gkjhgd90fg0d9gf8dgknj"
+     *        }
+     *      }
+     *   }
+     *
+     * @apiSuccessExample Success-Response:
+     *     HTTP/1.1 200 OK
+     * {
+     *  "ReaxiumResponse": {
+     *  "code": 0,
+     *  "message": "device synchronized successfully",
+     *  "object": [
+     *      {
+            "access_id": 3,
+            "device_id": 1,
+            "user_access_data_id": 1,
+            "user_access_data": {
+            "user_access_data_id": 1,
+            "user_id": 17,
+            "access_type_id": 3,
+            "user_login_name": null,
+            "user_password": null,
+            "rfid_code": "45623",
+            "biometric_code": null,
+            "status_id": 3
+            }
+            },
+            {
+            "access_id": 1,
+            "device_id": 1,
+            "user_access_data_id": 2,
+            "user_access_data": {
+            "user_access_data_id": 2,
+            "user_id": 1,
+            "access_type_id": 1,
+            "user_login_name": "reaxiumUser",
+            "user_password": "reaxiumPassword",
+            "rfid_code": null,
+            "biometric_code": null,
+            "status_id": 1
+            }
+            },
+            {
+            "access_id": 4,
+            "device_id": 1,
+            "user_access_data_id": 3,
+            "user_access_data": {
+            "user_access_data_id": 3,
+            "user_id": 17,
+            "access_type_id": 2,
+            "user_login_name": null,
+            "user_password": null,
+            "rfid_code": null,
+            "biometric_code": "4792v",
+            "status_id": 1
+            }
+            }
+            ]
+     *    }
+     *  }
+     *
+     *
+     * @apiErrorExample Error-Response Device Not Found:
+     * {
+     *  "ReaxiumResponse": {
+     *      "code": 404,
+     *      "message": "Device Not found",
+     *      "object": []
+     *      }
+     *  }
+     *
+     * @apiErrorExample Error-Response Device not Configured:
+     * {
+     *  "ReaxiumResponse": {
+     *      "code": 8,
+     *      "message": "Device not configured",
+     *      "object": []
+     *      }
+     *  }
+     *
+     *  @apiErrorExample Error-Response Device with invalid status:
+     * {
+     *  "ReaxiumResponse": {
+     *      "code": 9,
+     *      "message": "Device with invalid status in system",
+     *      "object": []
+     *      }
+     *  }
+     *
+     *
+     * @apiErrorExample Error-Response Invalid Parameters:
+     * {
+     *  "ReaxiumResponse": {
+     *       "code": 2,
+     *       "message": "Invalid Parameters received, please checkout the api documentation",
+     *       "object": []
+     *      }
+     *   }
+     *
+     *
+     * @apiErrorExample Error-Response Invalid Json Object:
+     * {
+     *      "ReaxiumResponse": {
+     *          "code": 2,
+     *          "message": "Invalid Parameters received, please checkout the api documentation",
+     *          "object": []
+     *       }
+     *      }
+     */
+    public function synchronizeDeviceAccess()
+    {
+        Log::info("synchronize a device service");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+        Log::info('Object received: ' . json_encode($jsonObject));
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
+            try {
+                if (isset($jsonObject['ReaxiumParameters']["ReaxiumDevice"])) {
+                    $deviceId = $jsonObject['ReaxiumParameters']["ReaxiumDevice"]['device_id'];
+                    $deviceToken = $jsonObject['ReaxiumParameters']["ReaxiumDevice"]['device_token'];
+                    if (isset($deviceId) && isset($deviceToken)) {
+                        $reaxiumDevice = $this->getDeviceInfo($deviceId);
+                        if (isset($reaxiumDevice)) {
+                            if ($reaxiumDevice[0]['status_id'] == 1) {
+                                if ($reaxiumDevice[0]['configured'] == 1) {
+
+                                    //Save the device token in any synchronize action
+                                    $fields = array('device_token' => $deviceToken);
+                                    $conditions = array('device_id' => $deviceId);
+                                    $this->updateDevice($fields, $conditions);
+
+                                    $deviceAccessData = $this->getDeviceAccessData($deviceId);
+
+                                    $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$SUCCESS_CODE;
+                                    $response['ReaxiumResponse']['message'] = 'Device synchronized successfully';
+                                    $response['ReaxiumResponse']['object'] = $deviceAccessData;
+
+                                } else {
+                                    $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$DEVICE_NOT_CONFIGURED_CODE;
+                                    $response['ReaxiumResponse']['message'] = ReaxiumApiMessages::$DEVICE_NOT_CONFIGURED_MESSAGE;
+                                }
+                            } else {
+                                $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_STATUS_CODE;
+                                $response['ReaxiumResponse']['message'] = ReaxiumApiMessages::$INVALID_STATUS_MESSAGE;
+                            }
+                        } else {
+                            $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                            $response['ReaxiumResponse']['message'] = 'No device found with the id: ' . $deviceId;
+                        }
+                    } else {
+                        $response = parent::seInvalidParametersMessage($response);
+                    }
+                } else {
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+            } catch (\Exception $e) {
+                Log::info("Error: " . $e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+        } else {
+            $response = parent::setInvalidJsonMessage($response);
+        }
+        Log::info("Responde Object: " . json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
+    /**
+     *
+     * get all device access data information
+     * @param $deviceId
+     * @return deviceAccessData
+     */
+    private function getDeviceAccessData($deviceId)
+    {
+        $userAccessControlTable = TableRegistry::get("UserAccessControl");
+        $userAccessControl = $userAccessControlTable->findByDeviceId($deviceId)->contain('UserAccessData');
+        if ($userAccessControl->count() > 0) {
+            $userAccessControl = $userAccessControl->toArray();
+        } else {
+            $userAccessControl = null;
+        }
+        Log::info(json_encode($userAccessControl));
+        return $userAccessControl;
+    }
 
 
 }

@@ -14,6 +14,8 @@ class UserAccessControlTable extends Table{
         $this->table('users_access_control');
         $this->primaryKey('access_id');
         $this->belongsTo('Status', array('foreignKey' => 'status_id'));
+        $this->belongsTo('ReaxiumDevice', array('foreignKey' => 'device_id'));
+        $this->belongsTo('UserAccessData', array('foreignKey' => 'user_access_data_id'));
     }
 
 
