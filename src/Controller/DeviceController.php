@@ -921,51 +921,51 @@ class DeviceController extends ReaxiumAPIController
      *  "message": "device synchronized successfully",
      *  "object": [
      *      {
-            "access_id": 3,
-            "device_id": 1,
-            "user_access_data_id": 1,
-            "user_access_data": {
-            "user_access_data_id": 1,
-            "user_id": 17,
-            "access_type_id": 3,
-            "user_login_name": null,
-            "user_password": null,
-            "rfid_code": "45623",
-            "biometric_code": null,
-            "status_id": 3
-            }
-            },
-            {
-            "access_id": 1,
-            "device_id": 1,
-            "user_access_data_id": 2,
-            "user_access_data": {
-            "user_access_data_id": 2,
-            "user_id": 1,
-            "access_type_id": 1,
-            "user_login_name": "reaxiumUser",
-            "user_password": "reaxiumPassword",
-            "rfid_code": null,
-            "biometric_code": null,
-            "status_id": 1
-            }
-            },
-            {
-            "access_id": 4,
-            "device_id": 1,
-            "user_access_data_id": 3,
-            "user_access_data": {
-            "user_access_data_id": 3,
-            "user_id": 17,
-            "access_type_id": 2,
-            "user_login_name": null,
-            "user_password": null,
-            "rfid_code": null,
-            "biometric_code": "4792v",
-            "status_id": 1
-            }
-            }
-            ]
+     * "access_id": 3,
+     * "device_id": 1,
+     * "user_access_data_id": 1,
+     * "user_access_data": {
+     * "user_access_data_id": 1,
+     * "user_id": 17,
+     * "access_type_id": 3,
+     * "user_login_name": null,
+     * "user_password": null,
+     * "rfid_code": "45623",
+     * "biometric_code": null,
+     * "status_id": 3
+     * }
+     * },
+     * {
+     * "access_id": 1,
+     * "device_id": 1,
+     * "user_access_data_id": 2,
+     * "user_access_data": {
+     * "user_access_data_id": 2,
+     * "user_id": 1,
+     * "access_type_id": 1,
+     * "user_login_name": "reaxiumUser",
+     * "user_password": "reaxiumPassword",
+     * "rfid_code": null,
+     * "biometric_code": null,
+     * "status_id": 1
+     * }
+     * },
+     * {
+     * "access_id": 4,
+     * "device_id": 1,
+     * "user_access_data_id": 3,
+     * "user_access_data": {
+     * "user_access_data_id": 3,
+     * "user_id": 17,
+     * "access_type_id": 2,
+     * "user_login_name": null,
+     * "user_password": null,
+     * "rfid_code": null,
+     * "biometric_code": "4792v",
+     * "status_id": 1
+     * }
+     * }
+     * ]
      *    }
      *  }
      *
@@ -988,7 +988,7 @@ class DeviceController extends ReaxiumAPIController
      *      }
      *  }
      *
-     *  @apiErrorExample Error-Response Device with invalid status:
+     * @apiErrorExample Error-Response Device with invalid status:
      * {
      *  "ReaxiumResponse": {
      *      "code": 9,
@@ -1084,7 +1084,24 @@ class DeviceController extends ReaxiumAPIController
     private function getDeviceAccessData($deviceId)
     {
         $userAccessControlTable = TableRegistry::get("UserAccessControl");
-        $userAccessControl = $userAccessControlTable->findByDeviceId($deviceId)->contain('UserAccessData');
+        $userAccessControl = $userAccessControlTable->find('All',
+            array('fields' => array('UserAccessData.user_id',
+                                    'UserAccessData.biometric_code',
+                                    'UserAccessData.rfid_code',
+                                    'UserAccessData.user_login_name',
+                                    'UserAccessData.user_password',
+                                    'AccessType.access_type_name',
+                                    'Users.first_name',
+                                    'Users.second_name',
+                                    'Users.first_last_name',
+                                    'Users.user_photo',
+                                    'Users.birthdate',
+                                    'Users.fingerprint',
+                                    'Business.business_name',
+                                    'Status.status_name',
+                                    'UserType.user_type_name')))
+            ->where(array('UserAccessControl.device_id' => $deviceId))
+            ->contain(array('UserAccessData' => array('AccessType','Users' => array('UserType','Business','Status'))));
         if ($userAccessControl->count() > 0) {
             $userAccessControl = $userAccessControl->toArray();
         } else {
