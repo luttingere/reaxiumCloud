@@ -12,6 +12,9 @@ use Cake\Log\Log;
 use Cake\ORM\TableRegistry;
 use App\Util\ReaxiumApiMessages;
 
+
+define("BIOMETRIC_FILE_PATH", "/reaxium_user_images/biometric_user_images/");
+define("BIOMETRIC_FILE_FULL_PATH","/var/www/html/reaxium_user_images/biometric_user_images/");
 class UsersController extends ReaxiumAPIController
 {
 
@@ -1039,6 +1042,71 @@ class UsersController extends ReaxiumAPIController
             $typeUserList = $typeUserList->toArray();
         }
         return $typeUserList;
+    }
+
+    public function saveUserFromDevice(){
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $object = parent::getJsonReceived();
+        $userName = !isset($object['userName']) ? null : $object['userName'];
+        $userSecondName = !isset($object['userSecondName']) ? null : $object['userSecondName'];
+        $userLastName = !isset($object['userLastName']) ? null : $object['userLastName'];
+        $userSecondLastName = !isset($object['userSecondLastName']) ? null : $object['userSecondLastName'];
+        $userPhoto = !isset($object['userPhoto']) ? null : $object['userPhoto'];
+        $userEmail = !isset($object['userEmail']) ? null : $object['userEmail'];
+        $userBirthDate = !isset($object['userBirthDate ']) ? null : $object['userBirthDate'];
+        $userDocumentId = !isset($object['userDocumentId ']) ? null : $object['userDocumentId'];
+
+        Log::info('Saving a user through a device, parameters recieved');
+        Log::info('User name: '.$userName);
+        Log::info('User last name: '.$userLastName);
+        Log::info('User document id: '.$userDocumentId);
+        Log::info('User Photo :'.$userPhoto);
+
+        if (isset($userName) && isset($userLastName) && isset($userDocumentId)) {
+            try{
+                $userTable = TableRegistry::get("Users");
+                $userByDocumentID = $userTable->findByDocumentId($userDocumentId);
+                if($userByDocumentID->count() < 1){
+                    $newUser = $userTable->newEntity();
+                    $newUser->document_id = $userDocumentId;
+                    $newUser->first_name = $userName;
+                    $newUser->first_last_name = $userLastName;
+                    if(isset($userSecondName)){
+                        $newUser->second_name = $userSecondName;
+                    }
+                    if(isset($userSecondLastName)){
+                        $newUser->second_last_name = $userSecondLastName;
+                    }
+                    if(isset($userEmail)){
+                        $newUser->email = $userEmail;
+                    }
+                    if(isset($userBirthDate)){
+                        $newUser->birthdate = $userBirthDate;
+                    }
+                    if(isset($userPhoto)){
+                        $userImageName = $userDocumentId.'profile_image.jpg';
+                        $imageFullPath = "http://" . $_SERVER['SERVER_NAME'] . BIOMETRIC_FILE_PATH . $userImageName;
+                        $newUser->user_photo = $imageFullPath;
+                        file_put_contents(BIOMETRIC_FILE_FULL_PATH . $userImageName, base64_decode($userPhoto));
+                    }
+                    $userSaved = $userTable->save($newUser);
+                    $response = parent::setSuccessfulSave($response);
+                    $response['ReaxiumResponse']['object'] = $userSaved;
+
+                }else{
+                    $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$USER_ALREADY_REGISTERED_CODE;
+                    $response['ReaxiumResponse']['message'] = ReaxiumApiMessages::$USER_ALREADY_REGISTERED_MESSAGE;
+                }
+            }catch(\Exception $e){
+                Log::info('Error saving a user');
+                Log::info($e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+        }else{
+            $response = parent::seInvalidParametersMessage($response);
+        }
+        $this->response->body(json_encode($response));
     }
 
 

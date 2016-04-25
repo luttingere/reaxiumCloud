@@ -1096,6 +1096,7 @@ class DeviceController extends ReaxiumAPIController
                                     'Users.first_last_name',
                                     'Users.user_photo',
                                     'Users.birthdate',
+                                    'Users.document_id',
                                     'Users.fingerprint',
                                     'Business.business_name',
                                     'Status.status_name',

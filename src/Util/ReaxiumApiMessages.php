@@ -45,6 +45,9 @@ class ReaxiumApiMessages
     public static $INVALID_STATUS_CODE = 9;
     public static $INVALID_STATUS_MESSAGE = 'Device with invalid status in system';
 
+    public static $USER_ALREADY_REGISTERED_CODE = 10;
+    public static $USER_ALREADY_REGISTERED_MESSAGE = 'User already registered with the same document id';
+
 
     public static $NOT_FOUND_CODE = 404;
     public static $CANNOT_SAVE = 101;
