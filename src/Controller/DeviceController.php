@@ -1104,7 +1104,6 @@ class DeviceController extends ReaxiumAPIController
         $response = parent::getDefaultReaxiumMessage();
         $jsonObject = parent::getJsonReceived();
 
-
         try{
 
             if(isset($jsonObject['ReaxiumParameters']["page"])){
@@ -1122,9 +1121,14 @@ class DeviceController extends ReaxiumAPIController
                         array('device_name LIKE' => '%' . $filter . '%'),
                         array('device_description LIKE' => '%' . $filter . '%'))));
 
-                    $deviceFound = $devicesTable->find()->where($whereCondition)->contain(array("Applications", "Status"))->order(array($sortedBy.' '.$sortDir));
+                    $deviceFound = $devicesTable->find()
+                        ->where($whereCondition)
+                        ->andWhere(array('ReaxiumDevice.status_id'=>1))
+                        ->contain(array("Applications", "Status"))->order(array($sortedBy.' '.$sortDir));
                 }else{
-                    $deviceFound = $devicesTable->find()->contain(array("Applications", "Status"))->order(array($sortedBy.' '.$sortDir));
+                    $deviceFound = $devicesTable->find()
+                        ->where(array('ReaxiumDevice.status_id'=>1))
+                        ->contain(array("Applications", "Status"))->order(array($sortedBy.' '.$sortDir));
                 }
 
 

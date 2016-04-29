@@ -412,9 +412,14 @@ class RoutesController extends ReaxiumAPIController
                         array('route_name LIKE' => '%' . $filter . '%'),
                         array('route_address LIKE' => '%' . $filter . '%')
                     )));
-                    $routeFound = $routeTable->find()->where($whereCondition)->order(array($sortedBy.' '.$sortDir));
+                    $routeFound = $routeTable->find()
+                        ->where($whereCondition)
+                        ->andWhere(array('Routes.status_id'=>1))
+                        ->order(array($sortedBy.' '.$sortDir));
                 }else{
-                    $routeFound = $routeTable->find()->order(array($sortedBy.' '.$sortDir));
+                    $routeFound = $routeTable->find()
+                        ->where(array('Routes.status_id'=>1))
+                        ->order(array($sortedBy.' '.$sortDir));
                 }
 
                 $count = $routeFound->count();
@@ -781,13 +786,17 @@ class RoutesController extends ReaxiumAPIController
 
             try{
                 if(isset($jsonObject['ReaxiumParameters']['ReaxiumRoutes']['filter'])){
+
                     $routeTable = TableRegistry::get("Routes");
                     $filter = $jsonObject['ReaxiumParameters']['ReaxiumRoutes']['filter'];
                     $whereCondition = array(array('OR' => array(
                         array('route_number LIKE' => '%' . $filter . '%'),
                         array('route_name LIKE' => '%' . $filter . '%'))));
 
-                    $routeFound = $routeTable->find()->where($whereCondition)->order(array('route_number','route_name'));
+                    $routeFound = $routeTable->find()
+                        ->where($whereCondition)
+                        ->andWhere(array('Routes.status_id'=>1))
+                        ->order(array('route_number','route_name'));
 
                     if ($routeFound->count() > 0) {
                         $routeFound = $routeFound->toArray();
@@ -813,4 +822,81 @@ class RoutesController extends ReaxiumAPIController
     }
 
 
+    public function deleteRoute(){
+
+        Log::info("deleting  Route service is running");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+        $id_route = null;
+
+        if(parent::validReaxiumJsonHeader($jsonObject)){
+
+            try{
+               if(isset($jsonObject['ReaxiumParameters']['ReaxiumRoutes'])){
+                   $this->loadModel('Routes');
+                   $route = $this->Routes->newEntity();
+                   $route = $this->Routes->patchEntity($route,$jsonObject['ReaxiumParameters']['ReaxiumRoutes']);
+
+                   if(isset($route->id_route)){
+                       $id_route =  $route->id_route;
+                       $route = $this->getRouteInfo($id_route);
+                       if(isset($route)){
+                        $this->deleteARoute($id_route);
+                           $response = parent::setSuccessfulDelete($response);
+                       }
+                       else{
+                           $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                           $response['ReaxiumResponse']['message'] = 'Device Not found';
+                       }
+                   }
+                   else{
+                       Log::info('Entro aqui 1');
+                       $response = parent::seInvalidParametersMessage($response);
+                   }
+               }
+               else{
+                   Log::info('Entro aqui 2');
+                   $response = parent::seInvalidParametersMessage($response);
+               }
+
+            }
+            catch(\Exception $e){
+                Log::info("Error deleting the route: " . $id_route . " error:" . $e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+
+        }else{
+            Log::info('Entro aqui 3');
+            $response = parent::setInvalidJsonMessage($response);
+        }
+
+        Log::info("Responde Object: " . json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
+
+    private function getRouteInfo($routeId){
+
+        Log::info("Id Ruta: ".$routeId);
+
+        $routeTable = TableRegistry::get('Routes');
+        $routeData = $routeTable->findByIdRoute($routeId);
+
+        if ($routeData->count() > 0) {
+            $routeData = $routeData->toArray();
+        } else {
+            $routeData = null;
+        }
+
+        return $routeData;
+
+    }
+
+
+    private function deleteARoute($routeId){
+
+        $this->loadModel('Routes');
+        $this->Routes->updateAll(array('status_id' => '3'), array('id_route' => $routeId));
+    }
 }
