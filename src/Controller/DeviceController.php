@@ -9,6 +9,8 @@
 namespace App\Controller;
 
 
+use Cake\Core\Exception\Exception;
+use Cake\I18n\Time;
 use Cake\Log\Log;
 use Cake\ORM\TableRegistry;
 use App\Util\ReaxiumApiMessages;
@@ -1093,6 +1095,157 @@ class DeviceController extends ReaxiumAPIController
         Log::info(json_encode($userAccessControl));
         return $userAccessControl;
     }
+
+
+    public function allDeviceWithPagination(){
+
+        Log::info("All Device information Service invoked");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+
+
+        try{
+
+            if(isset($jsonObject['ReaxiumParameters']["page"])){
+
+                $page = $jsonObject['ReaxiumParameters']["page"];
+                $sortedBy = !isset($jsonObject['ReaxiumParameters']["sortedBy"])? 'device_name':$jsonObject['ReaxiumParameters']["sortedBy"];
+                $sortDir = !isset($jsonObject['ReaxiumParameters']["sortDir"])? 'desc':$jsonObject['ReaxiumParameters']["sortDir"];
+                $filter = !isset($jsonObject['ReaxiumParameters']["filter"])? '':$jsonObject['ReaxiumParameters']["filter"];
+                $limit = !isset($jsonObject['ReaxiumParameters']["limit"])? 10:$jsonObject['ReaxiumParameters']["limit"];
+
+                $devicesTable = TableRegistry::get("ReaxiumDevice");
+
+                if(trim($filter) != '' ){
+                    $whereCondition = array(array('OR' => array(
+                        array('device_name LIKE' => '%' . $filter . '%'),
+                        array('device_description LIKE' => '%' . $filter . '%'))));
+
+                    $deviceFound = $devicesTable->find()->where($whereCondition)->contain(array("Applications", "Status"))->order(array($sortedBy.' '.$sortDir));
+                }else{
+                    $deviceFound = $devicesTable->find()->contain(array("Applications", "Status"))->order(array($sortedBy.' '.$sortDir));
+                }
+
+
+                $count = $deviceFound->count();
+                $this->paginate = array('limit' => $limit, 'page' => $page);
+                $deviceFound = $this->paginate($deviceFound);
+
+
+                if ($deviceFound->count() > 0) {
+                    $maxPages = floor((($count - 1) / $limit) + 1);
+                    $routeFound = $deviceFound->toArray();
+                    $response['ReaxiumResponse']['totalRecords'] = $count;
+                    $response['ReaxiumResponse']['totalPages'] = $maxPages;
+                    $response['ReaxiumResponse']['object'] = $routeFound;
+                    $response = parent::setSuccessfulResponse($response);
+                }
+                else {
+                    $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                    $response['ReaxiumResponse']['message'] = 'No Routes found';
+                }
+
+
+            }else{
+                $response = parent::seInvalidParametersMessage($response);
+            }
+        }
+        catch (\Exception $e){
+            Log::info('Error loading device information: ');
+            Log::info($e->getMessage());
+            $response = parent::setInternalServiceError($response);
+        }
+
+        Log::info("Responde Object: " . json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
+
+    public function associateADeviceWithRoute(){
+
+        Log::info("All Route information with filter Service invoked");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+
+        if(parent::validReaxiumJsonHeader($jsonObject)){
+
+            try{
+
+                $deviceId  = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id'];
+                $routeId = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['id_route']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['id_route'];
+                $start_date = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['start_date']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['start_date'];
+                $end_date = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['end_date']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['end_date'];
+
+                if(isset($deviceId) && isset($routeId)){
+
+                    $deviceRouteTable = TableRegistry::get("DeviceRoutes");
+
+                    $validate = $this->existRouteByDevice($deviceId,$routeId,$deviceRouteTable);
+
+                    Log::info($validate);
+
+                    if($validate == 0){
+
+                        //Time::createFromTime
+                        $deviceRouteData = $deviceRouteTable->newEntity();
+                        $deviceRouteData->id_route = $routeId;
+                        $deviceRouteData->device_id = $deviceId;
+                        $deviceRouteData->start_date = $start_date;
+                        $deviceRouteData->end_date = $end_date;
+
+                        $deviceRouteData = $deviceRouteTable->save($deviceRouteData);
+
+                        Log::info(json_encode($deviceRouteData));
+
+                        $response = parent::setSuccessfulResponse($response);
+
+                    }
+                    else{
+                        $response['ReaxiumResponse']['code'] = '1';
+                        $response['ReaxiumResponse']['message'] = 'The route is already associated with the device';
+                        $response['ReaxiumResponse']['object'] = [];
+                    }
+                }else{
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+
+            }
+            catch (\Exception $e){
+                Log::info($e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+
+        }
+        else{
+            $response = parent::seInvalidParametersMessage($response);
+        }
+
+        Log::info("Responde Object: " . json_encode($response));
+        $this->response->body(json_encode($response));
+
+    }
+
+
+    private function existRouteByDevice($device_id,$routeId,$deviceRouteTable){
+
+        $id_device_route=0;
+
+           $deviceRouteData = $deviceRouteTable->findByIdRouteAndDeviceId($routeId,$device_id);
+
+           if($deviceRouteData->count() > 0){
+
+               $deviceRouteData = $deviceRouteData->toArray();
+
+               foreach($deviceRouteData as $obj){
+                   $id_device_route = $obj['id_device_routes'];
+               }
+           }
+
+        return $id_device_route;
+    }
+
 
 
 }

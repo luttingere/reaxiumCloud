@@ -768,4 +768,49 @@ class RoutesController extends ReaxiumAPIController
 
         $this->response->body(json_encode($response));
     }
+
+
+    public function allRouteWithFilter(){
+
+        Log::info("All Route information with filter Service invoked");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+
+        if(parent::validReaxiumJsonHeader($jsonObject)){
+
+            try{
+                if(isset($jsonObject['ReaxiumParameters']['ReaxiumRoutes']['filter'])){
+                    $routeTable = TableRegistry::get("Routes");
+                    $filter = $jsonObject['ReaxiumParameters']['ReaxiumRoutes']['filter'];
+                    $whereCondition = array(array('OR' => array(
+                        array('route_number LIKE' => '%' . $filter . '%'),
+                        array('route_name LIKE' => '%' . $filter . '%'))));
+
+                    $routeFound = $routeTable->find()->where($whereCondition)->order(array('route_number','route_name'));
+
+                    if ($routeFound->count() > 0) {
+                        $routeFound = $routeFound->toArray();
+                        $response['ReaxiumResponse']['object'] = $routeFound;
+                        $response = parent::setSuccessfulResponse($response);
+                    } else {
+                        $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                        $response['ReaxiumResponse']['message'] = 'No Users found';
+                    }
+                }
+                else{
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+            }
+            catch (\Exception $e){
+                Log::info("Error getting the route " . $e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+            Log::info("Responde Object: " . json_encode($response));
+            $this->response->body(json_encode($response));
+        }
+
+    }
+
+
 }
