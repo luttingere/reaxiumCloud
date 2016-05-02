@@ -9,8 +9,11 @@
 namespace App\Controller;
 
 use App\Util\ReaxiumApiMessages;
+use Cake\Core\Exception\Exception;
+use Cake\Database\Schema\Table;
 use Cake\Log\Log;
 use Cake\ORM\TableRegistry;
+use PhpParser\Node\Expr\Array_;
 
 
 class AccessController extends ReaxiumAPIController
@@ -441,18 +444,18 @@ class AccessController extends ReaxiumAPIController
                         if (isset($accessFound)) {
                             $userController = new UsersController();
                             $user = $userController->getUser($accessFound[0]['user_id']);
-                            if($user[0]['user_type_id'] != 1){
+                            if ($user[0]['user_type_id'] != 1) {
                                 $trafficTable = TableRegistry::get("Traffic");
                                 $userId = $accessFound[0]['user_id'];
                                 $accessId = $accessFound[0]['access_id'];
                                 $deviceId = $accessFound[0]['device_id'];
                                 $lastTraffic = $this->getUserLastTraffic($userId, $trafficTable);
-                                Log::info("lastTraffic: ".$lastTraffic);
+                                Log::info("lastTraffic: " . $lastTraffic);
                                 if ($lastTraffic == NULL || ($lastTraffic['traffic_type_id'] == 2)) {
                                     Log::info("El usuario: " . $userId . " No tiene traficos el dia de hoy");
-                                    $this->registerTraffic($userId, 1, $accessId, $deviceId,ReaxiumApiMessages::$SUCCESS_ACCESS);
+                                    $this->registerTraffic($userId, 1, $accessId, $deviceId, ReaxiumApiMessages::$SUCCESS_ACCESS);
                                 } else {
-                                    $this->registerTraffic($userId, 2, $accessId, $deviceId,ReaxiumApiMessages::$SUCCESS_ACCESS);
+                                    $this->registerTraffic($userId, 2, $accessId, $deviceId, ReaxiumApiMessages::$SUCCESS_ACCESS);
                                 }
                             }
                             $accessFound[0]['UserData'] = $user;
@@ -528,7 +531,7 @@ class AccessController extends ReaxiumAPIController
      *      }
      *      }
      *
-     *  @apiParamExample {json} Request-Example:
+     * @apiParamExample {json} Request-Example:
      *
      *      {
      *          "ReaxiumParameters": {
@@ -581,63 +584,63 @@ class AccessController extends ReaxiumAPIController
      *          }
      *      }
      */
-    public function checkUserAccess(){
+    public function checkUserAccess()
+    {
         Log::info("User access information Service invoked");
         parent::setResultAsAJson();
-        $response = parent :: getDefaultReaxiumMessage();
+        $response = parent:: getDefaultReaxiumMessage();
         $jsonObject = parent::getJsonReceived();
         $failure = false;
         $result = array();
 
-        if(parent::validReaxiumJsonHeader($jsonObject)){
-            try{
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
+            try {
 
-                if(isset($jsonObject['ReaxiumParameters']["UserAccessData"])){
+                if (isset($jsonObject['ReaxiumParameters']["UserAccessData"])) {
 
                     $this->loadModel('UserAccessData');
 
-                    if(isset($jsonObject['ReaxiumParameters']['UserAccessData']['device_id']) &&
-                        isset($jsonObject['ReaxiumParameters']['UserAccessData']['access_type_id'])){
+                    if (isset($jsonObject['ReaxiumParameters']['UserAccessData']['device_id']) &&
+                        isset($jsonObject['ReaxiumParameters']['UserAccessData']['access_type_id'])
+                    ) {
 
                         $deviceId = $jsonObject['ReaxiumParameters']['UserAccessData']['device_id'];
                         $access_type_id = $jsonObject['ReaxiumParameters']['UserAccessData']['access_type_id'];
                         $arrayOfConditions = null;
 
-                        switch(intval($access_type_id)){
+                        switch (intval($access_type_id)) {
                             case 1:
                                 //login user and password
-                                if(isset($jsonObject['ReaxiumParameters']['UserAccessData']['user_login_name']) &&
-                                    isset($jsonObject['ReaxiumParameters']['UserAccessData']['user_password'])){
+                                if (isset($jsonObject['ReaxiumParameters']['UserAccessData']['user_login_name']) &&
+                                    isset($jsonObject['ReaxiumParameters']['UserAccessData']['user_password'])
+                                ) {
 
                                     $login_user = $jsonObject['ReaxiumParameters']['UserAccessData']['user_login_name'];
                                     $pass_user = $jsonObject['ReaxiumParameters']['UserAccessData']['user_password'];
                                     $arrayOfConditions = array('UserAccessData.access_type_id' => $access_type_id,
                                         'user_login_name' => $login_user,
                                         'user_password' => $pass_user);
-                                }
-                                else{
+                                } else {
                                     $failure = true;
                                 }
                                 break;
                             case 2:
                                 // biometric
-                                if(isset($jsonObject['ReaxiumParameters']['UserAccessData']['user_bio_code'])){
+                                if (isset($jsonObject['ReaxiumParameters']['UserAccessData']['user_bio_code'])) {
                                     $code_biometric = $jsonObject['ReaxiumParameters']['UserAccessData']['user_bio_code'];
                                     $arrayOfConditions = array('UserAccessData.access_type_id' => $access_type_id,
                                         'biometric_code' => $code_biometric);
-                                }
-                                else{
+                                } else {
                                     $failure = true;
                                 }
                                 break;
                             case 3:
                                 //rfid
-                                    if(isset($jsonObject['ReaxiumParameters']['UserAccessData']['user_rfid_code'])){
+                                if (isset($jsonObject['ReaxiumParameters']['UserAccessData']['user_rfid_code'])) {
                                     $code_rfid = $jsonObject['ReaxiumParameters']['UserAccessData']['user_rfid_code'];
                                     $arrayOfConditions = array('UserAccessData.access_type_id' => $access_type_id,
                                         'rfid_code' => $code_rfid);
-                                }
-                                else{
+                                } else {
                                     $failure = true;
                                 }
 
@@ -647,49 +650,48 @@ class AccessController extends ReaxiumAPIController
                                 break;
                         }
 
-                        if(!$failure){
+                        if (!$failure) {
 
                             $userExists = $this->getUserDataAccessInfo($arrayOfConditions);
 
-                            if(isset($userExists)) {
+                            if (isset($userExists)) {
 
                                 Log::debug($userExists[0]);
 
 
-                                    if($userExists[0]['status_id'] == ReaxiumApiMessages::$CODE_VALIDATE_STATUS){
+                                if ($userExists[0]['status_id'] == ReaxiumApiMessages::$CODE_VALIDATE_STATUS) {
 
-                                        array_push($result,$userExists[0]);
+                                    array_push($result, $userExists[0]);
 
-                                        $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$SUCCESS_CODE;
-                                        $response['ReaxiumResponse']['message'] = ReaxiumApiMessages::$SUCCESS_MESSAGE;
-                                        $response['ReaxiumResponse']['object'] = $result;
-                                    }
-                                    else{
-                                        $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_USER_STATUS_CODE;
-                                        $response['ReaxiumResponse']['message'] = ReaxiumApiMessages::$INVALID_USER_STATUS_MESSAGE;
-                                    }
+                                    $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$SUCCESS_CODE;
+                                    $response['ReaxiumResponse']['message'] = ReaxiumApiMessages::$SUCCESS_MESSAGE;
+                                    $response['ReaxiumResponse']['object'] = $result;
+                                } else {
+                                    $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_USER_STATUS_CODE;
+                                    $response['ReaxiumResponse']['message'] = ReaxiumApiMessages::$INVALID_USER_STATUS_MESSAGE;
+                                }
 
-                            }else{
+                            } else {
                                 $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_USER_ACCESS_CODE;
                                 $response['ReaxiumResponse']['message'] = ReaxiumApiMessages::$INVALID_USER_ACCESS_MESSAGE;
                             }
 
-                        }else{
+                        } else {
                             $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_PARAMETERS_CODE;
                             $response['ReaxiumResponse']['message'] = 'AccessType invalid';
                         }
 
                     }
 
-                }else {
+                } else {
                     $response = parent::seInvalidParametersMessage($response);
                 }
-            }catch(\Exception $e){
+            } catch (\Exception $e) {
                 Log::info("Error: " . $e->getMessage());
                 $response = $this->setInternalServiceError($response);
 
             }
-        }else{
+        } else {
             Log::info("Error - Json Invalido");
             $response = parent::setInvalidJsonMessage($response);
         }
@@ -702,18 +704,235 @@ class AccessController extends ReaxiumAPIController
      * @param $arrayOfConditions
      * @return $this|array|\Cake\ORM\Table|null
      */
-    private function getUserDataAccessInfo($arrayOfConditions){
+    private function getUserDataAccessInfo($arrayOfConditions)
+    {
         $access = TableRegistry::get("UserAccessData");
         $access = $access->find()->where($arrayOfConditions)->contain(array('Users' =>array('UserType','Status')));
         if($access->count() > 0){
             $access = $access->toArray();
-        }
-        else{
+        } else {
             $access = null;
         }
         return $access;
     }
 
 
+    //TODO nuevo servicio pendiente documentacion
+    public function createAccessNewUser(){
+
+        Log::info("Create Access Service invoked");
+
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+
+        if (parent:: validReaxiumJsonHeader($jsonObject)) {
+
+            $user_id = !isset($jsonObject['ReaxiumParameters']["UserAccessData"]["user_id"]) ? null : $jsonObject['ReaxiumParameters']["UserAccessData"]["user_id"];
+            $access_type_id = !isset($jsonObject['ReaxiumParameters']["UserAccessData"]["access_type_id"]) ? null : $jsonObject['ReaxiumParameters']["UserAccessData"]["access_type_id"];
+            $user_login = !isset($jsonObject['ReaxiumParameters']["UserAccessData"]["user_login"]) ? null : $jsonObject['ReaxiumParameters']["UserAccessData"]["user_login"];
+            $user_password = !isset($jsonObject['ReaxiumParameters']["UserAccessData"]["user_password"]) ? null : $jsonObject['ReaxiumParameters']["UserAccessData"]["user_password"];
+
+            if (isset($user_id) && isset($access_type_id) && isset($user_login) && isset($user_password)) {
+
+                try {
+                    $userDataAccessTable = TableRegistry::get("UserAccessData");
+                    $userAccessInfo = $userDataAccessTable->findByUserIdAndAccessTypeId($user_id, $access_type_id);
+
+                    if ($userAccessInfo->count() > 0) {
+                        $userAccessInfo = $userAccessInfo->toArray();
+                        $userDataAccessTable->updateAll(array("user_login_name" => $user_login, "user_password" => $user_password), array('user_access_data_id' => $userAccessInfo[0]['user_access_data_id']));
+
+                        Log::info("LoginUser and Password actualizado para usuario: " + $user_id);
+                        Log::info(json_encode($userAccessInfo));
+
+                        $response = parent::setSuccessfulResponse($response);
+                    } else {
+
+                        $userAccessData = $userDataAccessTable->newEntity();
+                        $userAccessData->user_id = $user_id;
+                        $userAccessData->access_type_id = $access_type_id;
+                        $userAccessData->user_login_name = $user_login;
+                        $userAccessData->user_password = $user_password;
+                        $userAccessData = $userDataAccessTable->save($userAccessData);
+
+                        Log::info("Accesso creado para el usuario: " + $user_id);
+                        Log::info(json_encode($userAccessData));
+
+                        $response = parent::setSuccessfulResponse($response);
+                    }
+
+                } catch (\Exception $e) {
+
+                    Log::info('Error loading the access information for the user: ' . $user_id);
+                    Log::info($e->getMessage());
+
+                    if($e->getCode()== 23000){
+                        $response['ReaxiumResponse']['code'] = '1';
+                        $response['ReaxiumResponse']['message'] = "Login and Password Invalid try again";
+                        $response['ReaxiumResponse']['object'] = [];
+                    }else{
+                        $response = parent::setInternalServiceError($response);
+                    }
+
+                }
+            }
+            else{
+                Log::info("Se quedo aqui");
+                $response = parent::seInvalidParametersMessage($response);
+            }
+        }
+        else {
+            $response = parent::seInvalidParametersMessage($response);
+        }
+
+        $this->response->body(json_encode($response));
+    }
+
+
+    /**
+     *
+     */
+    public function checkAccessControlByUser(){
+
+        Log::info("cheack Access Service invoked");
+
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+        $arrayFinal=[];
+
+        if(parent::validReaxiumJsonHeader($jsonObject)){
+
+            $user_id = !isset($jsonObject["ReaxiumParameters"]["ReaxiumDevice"]["user_id"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumDevice"]["user_id"];
+            $device_id = !isset($jsonObject["ReaxiumParameters"]["ReaxiumDevice"]["device_id"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumDevice"]["device_id"];
+
+
+            if(isset($user_id) && isset($device_id)){
+                try{
+                    $userDataAccess = TableRegistry::get("UserAccessData");
+                    $userDataAccess = $userDataAccess->findByUserId($user_id);
+
+
+                    if($userDataAccess->count() > 0){
+
+                        $userAccessControlTable = TableRegistry::get("UserAccessControl");
+
+                       $userDataAccessTable = $userDataAccess->toArray();
+
+                        foreach($userDataAccessTable as $accessData){
+
+                            if($this->validateAccessControl($device_id,$accessData['user_access_data_id'],$userAccessControlTable)){
+                                array_push($arrayFinal,$accessData);
+                            }
+                        }
+
+                        Log::info(json_encode($arrayFinal));
+
+                        if(count($arrayFinal) > 0){
+                            $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$SUCCESS_CODE;
+                            $response['ReaxiumResponse']['message'] = ReaxiumApiMessages::$SUCCESS_MESSAGE;
+                            $response['ReaxiumResponse']['object'] = $arrayFinal;
+
+                        }else{
+                            $response['ReaxiumResponse']['code'] = '2';
+                            $response['ReaxiumResponse']['message'] = "All access is already configured for this user";
+                            $response['ReaxiumResponse']['object'] = [];
+
+                        }
+                    }else{
+                        $response['ReaxiumResponse']['code'] = "1";
+                        $response['ReaxiumResponse']['message'] = "Not get data by user";
+                        $response['ReaxiumResponse']['object'] = [];
+
+                    }
+
+                }catch(\Exception $e){
+                    Log::info('Error loading the access information for the user: ' . $user_id);
+                    Log::info($e->getMessage());
+                    $response = parent::setInternalServiceError($response);
+                }
+            }
+        }
+        else{
+            $response = parent::seInvalidParametersMessage($response);
+        }
+        $this->response->body(json_encode($response));
+    }
+
+
+    private function validateAccessControl($device_id,$user_access_data_id,$userAccessControlTable){
+
+        Log::info("Device: ".$device_id . " Access: ".$user_access_data_id);
+        $validate = true;
+
+        $userAccessControl = $userAccessControlTable->findByDeviceIdAndUserAccessDataId($device_id,$user_access_data_id);
+
+        Log::info($userAccessControl->count());
+
+        if($userAccessControl->count() > 0){
+            $validate = false;
+        }
+
+        return $validate;
+    }
+
+
+    public function addDeviceAccessData(){
+
+        Log::info("Insert access relationship device Service invoked");
+
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+        $validate = true;
+
+        if(parent::validReaxiumJsonHeader($jsonObject)){
+
+            $arrayObj = !isset($jsonObject["ReaxiumParameters"]["ReaxiumDevice"]["object"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumDevice"]["object"];
+
+            if(isset($arrayObj)){
+
+                if(count($arrayObj) > 0){
+
+                    try{
+                        Log::info($arrayObj);
+                        $userAccessControlTable = TableRegistry::get("UserAccessControl");
+                        $userAccessData = $userAccessControlTable->newEntities($arrayObj);
+
+                        foreach($userAccessData as $entity){
+
+                            if(!$userAccessControlTable->save($entity)){
+                                $validate=false;
+                               break;
+                            }
+                        }
+
+                        if($validate){
+                            $response = parent::setSuccessfulResponse($response);
+                        }else{
+                            Log::info('Error insertando elemento en tabla users_access_control');
+                            $response = parent::setInternalServiceError($response);
+                        }
+
+                    }
+                    catch (\Exception $e){
+                        Log::info('Error loading the access information for the user: ');
+                        Log::info($e->getMessage());
+                        $response = parent::setInternalServiceError($response);
+                    }
+
+                }else{
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+            }else{
+                $response = parent::seInvalidParametersMessage($response);
+            }
+
+        }else{
+            $response = parent::seInvalidParametersMessage($response);
+        }
+        $this->response->body(json_encode($response));
+    }
 
 }

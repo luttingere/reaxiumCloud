@@ -705,9 +705,14 @@ class UsersController extends ReaxiumAPIController
                             array('first_last_name LIKE' => '%' . $filter . '%'),
                             array('document_id LIKE' => '%' . $filter . '%')
                         )));
-                        $userFound = $userTable->find()->where($whereCondition)->contain(array("Status", "UserType"))->order(array($sortedBy . ' ' . $sortDir));
-                    } else {
-                        $userFound = $userTable->find()->contain(array("Status", "UserType"))->order(array($sortedBy . ' ' . $sortDir));
+                        $userFound = $userTable->find()
+                            ->where($whereCondition)
+                            ->andWhere(array('status_id'=>1))
+                            ->contain(array("Status", "UserType"))->order(array($sortedBy.' '.$sortDir));
+                    }else{
+                        $userFound = $userTable->find()
+                            ->where(array('status_id'=>1))
+                            ->contain(array("Status", "UserType"))->order(array($sortedBy.' '.$sortDir));
                     }
 
                     $count = $userFound->count();
@@ -799,7 +804,11 @@ class UsersController extends ReaxiumAPIController
                         array('first_last_name LIKE' => '%' . $filter . '%'),
                         array('document_id LIKE' => '%' . $filter . '%')
                     )));
-                    $userFound = $userTable->find()->where($whereCondition)->order(array('first_name', 'first_last_name'));
+                    $userFound = $userTable->find()
+                        ->where($whereCondition)
+                        ->andWhere(array('status_id'=>1))
+                        ->order(array('first_name', 'first_last_name'));
+
                     if ($userFound->count() > 0) {
                         $userFound = $userFound->toArray();
                         $response['ReaxiumResponse']['object'] = $userFound;
