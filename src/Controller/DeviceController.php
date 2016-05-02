@@ -1267,7 +1267,6 @@ class DeviceController extends ReaxiumAPIController
     }
 
 
-
     public function deleteRouteByDevice(){
 
         Log::info("deleting  Route relation with device running");
@@ -1299,6 +1298,92 @@ class DeviceController extends ReaxiumAPIController
         Log::info("Responde Object: " . json_encode($response));
         $this->response->body(json_encode($response));
 
+    }
+
+    //TODO falta documentacion
+    public function getUsersByDevice(){
+
+        Log::info("synchronize a device service");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+
+
+        if(parent::validReaxiumJsonHeader($jsonObject)){
+
+            try{
+
+                $device_id = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id'])? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id'];
+
+                if(isset($device_id)){
+                    $reaxiumDevice = $this->getDeviceInfo($device_id);
+
+                    if(isset($reaxiumDevice)){
+
+                        if ($reaxiumDevice[0]['status_id'] == 1) {
+
+                            if ($reaxiumDevice[0]['configured'] == 1) {
+
+                                $deviceAccessData = $this->getDeviceAccessDataUsers($device_id);
+
+                                $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$SUCCESS_CODE;
+                                $response['ReaxiumResponse']['message'] = 'Request Success';
+                                $response['ReaxiumResponse']['object'] = $deviceAccessData;
+
+                            } else {
+                                $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$DEVICE_NOT_CONFIGURED_CODE;
+                                $response['ReaxiumResponse']['message'] = ReaxiumApiMessages::$DEVICE_NOT_CONFIGURED_MESSAGE;
+                            }
+
+                        }else{
+                            $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_STATUS_CODE;
+                            $response['ReaxiumResponse']['message'] = ReaxiumApiMessages::$INVALID_STATUS_MESSAGE;
+                        }
+                    }
+                    else{
+                        $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                        $response['ReaxiumResponse']['message'] = 'No device found with the id: ' . $device_id;
+                    }
+                }
+                else{
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+            }
+            catch (\Exception $e){
+                Log::info("Error: " . $e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+        }else{
+            $response = parent::setInvalidJsonMessage($response);
+        }
+        Log::info("Responde Object: " . json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
+
+    private function getDeviceAccessDataUsers($deviceId)
+    {
+        $userAccessControlTable = TableRegistry::get("UserAccessControl");
+        $userAccessControl = $userAccessControlTable->find('All',
+            array('fields' => array('UserAccessData.user_id',
+                'UserAccessData.user_access_data_id',
+                'Users.first_name',
+                'Users.second_name',
+                'Users.first_last_name',
+                'Users.user_photo',
+                'Users.birthdate',
+                'Users.document_id',
+                'Users.fingerprint',
+                'Status.status_name')))
+            ->where(array('UserAccessControl.device_id' => $deviceId, 'Users.status_id' => '1'))
+            ->contain(array('UserAccessData' => array('AccessType', 'Users' => array('UserType', 'Business', 'Status'))));
+        if ($userAccessControl->count() > 0) {
+            $userAccessControl = $userAccessControl->toArray();
+        } else {
+            $userAccessControl = null;
+        }
+        Log::info(json_encode($userAccessControl));
+        return $userAccessControl;
     }
 
 }
