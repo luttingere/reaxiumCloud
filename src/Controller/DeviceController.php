@@ -1088,23 +1088,23 @@ class DeviceController extends ReaxiumAPIController
         $userAccessControlTable = TableRegistry::get("UserAccessControl");
         $userAccessControl = $userAccessControlTable->find('All',
             array('fields' => array('UserAccessData.user_id',
-                                    'UserAccessData.biometric_code',
-                                    'UserAccessData.rfid_code',
-                                    'UserAccessData.user_login_name',
-                                    'UserAccessData.user_password',
-                                    'AccessType.access_type_name',
-                                    'Users.first_name',
-                                    'Users.second_name',
-                                    'Users.first_last_name',
-                                    'Users.user_photo',
-                                    'Users.birthdate',
-                                    'Users.document_id',
-                                    'Users.fingerprint',
-                                    'Business.business_name',
-                                    'Status.status_name',
-                                    'UserType.user_type_name')))
-            ->where(array('UserAccessControl.device_id' => $deviceId))
-            ->contain(array('UserAccessData' => array('AccessType','Users' => array('UserType','Business','Status'))));
+                'UserAccessData.biometric_code',
+                'UserAccessData.rfid_code',
+                'UserAccessData.user_login_name',
+                'UserAccessData.user_password',
+                'AccessType.access_type_name',
+                'Users.first_name',
+                'Users.second_name',
+                'Users.first_last_name',
+                'Users.user_photo',
+                'Users.birthdate',
+                'Users.document_id',
+                'Users.fingerprint',
+                'Business.business_name',
+                'Status.status_name',
+                'UserType.user_type_name')))
+            ->where(array('UserAccessControl.device_id' => $deviceId, 'Users.status_id' => '1'))
+            ->contain(array('UserAccessData' => array('AccessType', 'Users' => array('UserType', 'Business', 'Status'))));
         if ($userAccessControl->count() > 0) {
             $userAccessControl = $userAccessControl->toArray();
         } else {
@@ -1115,38 +1115,39 @@ class DeviceController extends ReaxiumAPIController
     }
 
 
-    public function allDeviceWithPagination(){
+    public function allDeviceWithPagination()
+    {
 
         Log::info("All Device information Service invoked");
         parent::setResultAsAJson();
         $response = parent::getDefaultReaxiumMessage();
         $jsonObject = parent::getJsonReceived();
 
-        try{
+        try {
 
-            if(isset($jsonObject['ReaxiumParameters']["page"])){
+            if (isset($jsonObject['ReaxiumParameters']["page"])) {
 
                 $page = $jsonObject['ReaxiumParameters']["page"];
-                $sortedBy = !isset($jsonObject['ReaxiumParameters']["sortedBy"])? 'device_name':$jsonObject['ReaxiumParameters']["sortedBy"];
-                $sortDir = !isset($jsonObject['ReaxiumParameters']["sortDir"])? 'desc':$jsonObject['ReaxiumParameters']["sortDir"];
-                $filter = !isset($jsonObject['ReaxiumParameters']["filter"])? '':$jsonObject['ReaxiumParameters']["filter"];
-                $limit = !isset($jsonObject['ReaxiumParameters']["limit"])? 10:$jsonObject['ReaxiumParameters']["limit"];
+                $sortedBy = !isset($jsonObject['ReaxiumParameters']["sortedBy"]) ? 'device_name' : $jsonObject['ReaxiumParameters']["sortedBy"];
+                $sortDir = !isset($jsonObject['ReaxiumParameters']["sortDir"]) ? 'desc' : $jsonObject['ReaxiumParameters']["sortDir"];
+                $filter = !isset($jsonObject['ReaxiumParameters']["filter"]) ? '' : $jsonObject['ReaxiumParameters']["filter"];
+                $limit = !isset($jsonObject['ReaxiumParameters']["limit"]) ? 10 : $jsonObject['ReaxiumParameters']["limit"];
 
                 $devicesTable = TableRegistry::get("ReaxiumDevice");
 
-                if(trim($filter) != '' ){
+                if (trim($filter) != '') {
                     $whereCondition = array(array('OR' => array(
                         array('device_name LIKE' => '%' . $filter . '%'),
                         array('device_description LIKE' => '%' . $filter . '%'))));
 
                     $deviceFound = $devicesTable->find()
                         ->where($whereCondition)
-                        ->andWhere(array('ReaxiumDevice.status_id'=>1))
-                        ->contain(array("Applications", "Status"))->order(array($sortedBy.' '.$sortDir));
-                }else{
+                        ->andWhere(array('ReaxiumDevice.status_id' => 1))
+                        ->contain(array("Applications", "Status"))->order(array($sortedBy . ' ' . $sortDir));
+                } else {
                     $deviceFound = $devicesTable->find()
-                        ->where(array('ReaxiumDevice.status_id'=>1))
-                        ->contain(array("Applications", "Status"))->order(array($sortedBy.' '.$sortDir));
+                        ->where(array('ReaxiumDevice.status_id' => 1))
+                        ->contain(array("Applications", "Status"))->order(array($sortedBy . ' ' . $sortDir));
                 }
 
 
@@ -1162,18 +1163,16 @@ class DeviceController extends ReaxiumAPIController
                     $response['ReaxiumResponse']['totalPages'] = $maxPages;
                     $response['ReaxiumResponse']['object'] = $routeFound;
                     $response = parent::setSuccessfulResponse($response);
-                }
-                else {
+                } else {
                     $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
                     $response['ReaxiumResponse']['message'] = 'No Routes found';
                 }
 
 
-            }else{
+            } else {
                 $response = parent::seInvalidParametersMessage($response);
             }
-        }
-        catch (\Exception $e){
+        } catch (\Exception $e) {
             Log::info('Error loading device information: ');
             Log::info($e->getMessage());
             $response = parent::setInternalServiceError($response);
@@ -1184,31 +1183,32 @@ class DeviceController extends ReaxiumAPIController
     }
 
 
-    public function associateADeviceWithRoute(){
+    public function associateADeviceWithRoute()
+    {
 
         Log::info("All Route information with filter Service invoked");
         parent::setResultAsAJson();
         $response = parent::getDefaultReaxiumMessage();
         $jsonObject = parent::getJsonReceived();
 
-        if(parent::validReaxiumJsonHeader($jsonObject)){
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
 
-            try{
+            try {
 
-                $deviceId  = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id'];
+                $deviceId = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id'];
                 $routeId = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['id_route']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['id_route'];
                 $start_date = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['start_date']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['start_date'];
                 $end_date = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['end_date']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['end_date'];
 
-                if(isset($deviceId) && isset($routeId)){
+                if (isset($deviceId) && isset($routeId)) {
 
                     $deviceRouteTable = TableRegistry::get("DeviceRoutes");
 
-                    $validate = $this->existRouteByDevice($deviceId,$routeId,$deviceRouteTable);
+                    $validate = $this->existRouteByDevice($deviceId, $routeId, $deviceRouteTable);
 
                     Log::info($validate);
 
-                    if($validate == 0){
+                    if ($validate == 0) {
 
                         //Time::createFromTime
                         $deviceRouteData = $deviceRouteTable->newEntity();
@@ -1223,24 +1223,21 @@ class DeviceController extends ReaxiumAPIController
 
                         $response = parent::setSuccessfulResponse($response);
 
-                    }
-                    else{
+                    } else {
                         $response['ReaxiumResponse']['code'] = '1';
                         $response['ReaxiumResponse']['message'] = 'The route is already associated with the device';
                         $response['ReaxiumResponse']['object'] = [];
                     }
-                }else{
+                } else {
                     $response = parent::seInvalidParametersMessage($response);
                 }
 
-            }
-            catch (\Exception $e){
+            } catch (\Exception $e) {
                 Log::info($e->getMessage());
                 $response = parent::setInternalServiceError($response);
             }
 
-        }
-        else{
+        } else {
             $response = parent::seInvalidParametersMessage($response);
         }
 
@@ -1250,24 +1247,24 @@ class DeviceController extends ReaxiumAPIController
     }
 
 
-    private function existRouteByDevice($device_id,$routeId,$deviceRouteTable){
+    private function existRouteByDevice($device_id, $routeId, $deviceRouteTable)
+    {
 
-        $id_device_route=0;
+        $id_device_route = 0;
 
-           $deviceRouteData = $deviceRouteTable->findByIdRouteAndDeviceId($routeId,$device_id);
+        $deviceRouteData = $deviceRouteTable->findByIdRouteAndDeviceId($routeId, $device_id);
 
-           if($deviceRouteData->count() > 0){
+        if ($deviceRouteData->count() > 0) {
 
-               $deviceRouteData = $deviceRouteData->toArray();
+            $deviceRouteData = $deviceRouteData->toArray();
 
-               foreach($deviceRouteData as $obj){
-                   $id_device_route = $obj['id_device_routes'];
-               }
-           }
+            foreach ($deviceRouteData as $obj) {
+                $id_device_route = $obj['id_device_routes'];
+            }
+        }
 
         return $id_device_route;
     }
-
 
 
 }

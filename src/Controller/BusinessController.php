@@ -357,6 +357,84 @@ class BusinessController extends ReaxiumAPIController
         $this->response->body(json_encode($response));
     }
 
+
+
+    /**
+     * @api {post} /Business/allBusinessFiltered filter and get all the business registered in reaxium cloud
+     * @apiName allBusinessFiltered
+     * @apiGroup Business
+     *
+     * @apiParamExample {json} Request:
+     *
+     *      {"ReaxiumParameters": {
+     *              "Business": {
+                       "filter":"j-5668"
+     *            }
+     *          }
+     *       }
+     *
+     *
+     * @apiSuccessExample Success-Response:
+     *     HTTP/1.1 200 OK
+     *
+     *
+     *
+     * @apiErrorExample Error-Response Invalid Parameters:
+     *      {"ReaxiumResponse": {
+     *          "code": 2,
+     *          "message": "Invalid Parameters received, please checkout the api documentation",
+     *          "object": []
+     *          }
+     *      }
+     *
+     *
+     * @apiErrorExample Error-Response Invalid Json Object:
+     *      {"ReaxiumResponse": {
+     *          "code": 2,
+     *          "message": "Invalid Parameters received, please checkout the api documentation",
+     *          "object": []
+     *          }
+     *      }
+     */
+    public function allBusinessFiltered()
+    {
+        Log::info("All business filtered service invoked");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
+            Log::info('Object received: ' . json_encode($jsonObject));
+            try {
+                if (isset($jsonObject['ReaxiumParameters']["Business"]["filter"])) {
+                    $sortedBy = "business_name";
+                    $sortDir = "desc";
+                    $filter = $jsonObject['ReaxiumParameters']["Business"]["filter"];
+                    $businessFound = $this->lookUpAllBusiness($filter, $sortedBy, $sortDir);
+                    if ($businessFound->count() > 0) {
+                        $businessFound = $businessFound->toArray();
+                        $response = parent::setSuccessfulResponse($response);
+                        $response['ReaxiumResponse']['object'] = $businessFound;
+                    } else {
+                        $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                        $response['ReaxiumResponse']['message'] = 'No Business found';
+                    }
+                } else {
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+            } catch (\Exception $e) {
+                Log::info("Error getting all business information " . $e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+        } else {
+            $response = parent::setInvalidJsonMessage($response);
+        }
+        Log::info("Responde Object: " . json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
+
+
+
     /**
      * search a business information by its ID
      * @param $businessId
