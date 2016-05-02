@@ -18,6 +18,10 @@ class BusinessTable extends Table{
         parent::initialize($config);
         $this->table('business');
         $this->primaryKey('business_id');
+        $this->belongsTo('Address',array('foreignKey' => 'address_id'));
+        $this->belongsTo('PhoneNumbers',array('foreignKey' => 'phone_number_id'));
+        $this->belongsTo('Status', array('foreignKey' => 'status_id'));
+
     }
 
 }

@@ -48,6 +48,9 @@ class ReaxiumApiMessages
     public static $USER_ALREADY_REGISTERED_CODE = 10;
     public static $USER_ALREADY_REGISTERED_MESSAGE = 'User already registered with the same document id';
 
+    public static $ERROR_CREATING_A_BUSINESS_CODE = 12;
+    public static $ERROR_CREATING_A_BUSINESS_MESSAGE = 'Error creating the user, see error log';
+
 
     public static $NOT_FOUND_CODE = 404;
     public static $CANNOT_SAVE = 101;
