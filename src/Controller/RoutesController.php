@@ -101,16 +101,16 @@ class RoutesController extends ReaxiumAPIController
                                     $response['ReaxiumResponse']['object'] = $routesDevice;
                                     $response = parent::setSuccessfulResponse($response);
                                 } else {
-                                    $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                                    $response['ReaxiumResponse']['code'] = "1";
                                     $response['ReaxiumResponse']['message'] = 'Device has no routes';
                                 }
                             } else {
-                                $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                                $response['ReaxiumResponse']['code'] = "2";
                                 $response['ReaxiumResponse']['message'] = 'Device has status invalid';
                             }
 
                         } else {
-                            $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                            $response['ReaxiumResponse']['code'] = "3";
                             $response['ReaxiumResponse']['message'] = 'Device has status invalid';
                         }
 
@@ -899,4 +899,7 @@ class RoutesController extends ReaxiumAPIController
         $this->loadModel('Routes');
         $this->Routes->updateAll(array('status_id' => '3'), array('id_route' => $routeId));
     }
+
+
+
 }

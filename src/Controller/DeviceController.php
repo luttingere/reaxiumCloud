@@ -1251,5 +1251,37 @@ class DeviceController extends ReaxiumAPIController
     }
 
 
+    public function deleteRouteByDevice(){
+
+        Log::info("deleting  Route relation with device running");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+        $id_device_route = null;
+
+        try{
+            if(parent::validReaxiumJsonHeader($jsonObject)){
+
+                $id_device_route = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['id_device_routes'])? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['id_device_routes'];
+                $deviceRouteTable = TableRegistry::get('DeviceRoutes');
+                $whereCondition = array('id_device_routes'=>$id_device_route);
+                $deviceRouteTable->deleteAll($whereCondition);
+
+                $response = parent::setSuccessfulDelete($response);
+
+
+            }else{
+                $response = parent::seInvalidParametersMessage($response);
+            }
+        }
+        catch(\Exception $e){
+            Log::info("Error deleting the route: " . $id_device_route . " error:" . $e->getMessage());
+            $response = parent::setInternalServiceError($response);
+        }
+
+        Log::info("Responde Object: " . json_encode($response));
+        $this->response->body(json_encode($response));
+
+    }
 
 }
