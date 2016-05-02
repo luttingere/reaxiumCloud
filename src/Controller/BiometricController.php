@@ -27,20 +27,33 @@ class BiometricController extends ReaxiumAPIController
         $biometricHexaCode = !isset($object['biometricHexaCode']) ? null : $object['biometricHexaCode'];
         $biometricImage = !isset($object['biometricImage']) ? null : $object['biometricImage'];
         $biometricImageName = !isset($object['biometricImageName']) ? null : $object['biometricImageName'];
+        $deviceId = !isset($object['device_id']) ? null : $object['device_id'];
         $userId = !isset($object['user_id']) ? null : $object['user_id'];
         Log::info($biometricImage);
         Log::info($biometricImageName);
         Log::info($userId);
+        Log::info('DeviceId: '.$deviceId);
         if (isset($biometricHexaCode) && isset($biometricImage) && isset($userId) && isset($biometricImageName)) {
             try {
                 $userDataAccessTable = TableRegistry::get("UserAccessData");
+                $userAccessControlTable = TableRegistry::get("UserAccessControl");
                 $biometricInfo = $userDataAccessTable->findByUserIdAndAccessTypeId($userId, 2);
                 if ($biometricInfo->count() > 0) {
 
                     $biometricInfo = $biometricInfo->toArray();
                     $userDataAccessTable->updateAll(array('biometric_code' => $biometricHexaCode), array('user_access_data_id' => $biometricInfo[0]['user_access_data_id']));
 
-                    Log::info("Biometrico actualizado para el usuario: " + $userId);
+                    if(isset($deviceId)){
+                        $userAccessControl = $userAccessControlTable->findByUserAccessDataIdAndDeviceId($biometricInfo[0]['user_access_data_id'],$deviceId);
+                        if($userAccessControl->count() < 1){
+                            $userAccessControl = $userAccessControlTable->newEntity();
+                            $userAccessControl->device_id = $deviceId;
+                            $userAccessControl->user_access_data_id = $biometricInfo[0]['user_access_data_id'];
+                            $userAccessControlTable->save($userAccessControl);
+                        }
+                    }
+
+                    Log::info("Biometrico actualizado para el usuario: " .$userId);
                     Log::info(json_encode($biometricInfo));
 
                 } else {
@@ -50,6 +63,13 @@ class BiometricController extends ReaxiumAPIController
                     $userAccessData->access_type_id = 2;
                     $userAccessData->biometric_code = $biometricHexaCode;
                     $userAccessData = $userDataAccessTable->save($userAccessData);
+
+                    if(isset($deviceId)){
+                        $userAccessControl = $userAccessControlTable->newEntity();
+                        $userAccessControl->device_id = $deviceId;
+                        $userAccessControl->user_access_data_id = $userAccessData['user_access_data_id'];
+                        $userAccessControlTable->save($userAccessControl);
+                    }
 
                     Log::info("Biometrico creado para el usuario: " + $userId);
                     Log::info(json_encode($userAccessData));
@@ -63,6 +83,7 @@ class BiometricController extends ReaxiumAPIController
                 Log::info("Biometrico configurado con exito para el usuario: " + $userId);
 
                 $response = parent::setSuccessfulResponse($response);
+
             } catch (\Exception $e) {
                 Log::info('Error loading the biometric information for the user: ' . $userId);
                 Log::info($e->getMessage());

@@ -12,6 +12,10 @@ use Cake\Log\Log;
 use Cake\ORM\TableRegistry;
 use App\Util\ReaxiumApiMessages;
 
+
+define("BIOMETRIC_FILE_PATH", "/reaxium_user_images/biometric_user_images/");
+define("BIOMETRIC_FILE_FULL_PATH", "/var/www/html/reaxium_user_images/biometric_user_images/");
+
 class UsersController extends ReaxiumAPIController
 {
 
@@ -688,14 +692,14 @@ class UsersController extends ReaxiumAPIController
                 if (isset($jsonObject['ReaxiumParameters']["page"])) {
 
                     $page = $jsonObject['ReaxiumParameters']["page"];
-                    $sortedBy = !isset($jsonObject['ReaxiumParameters']["sortedBy"])? 'first_last_name':$jsonObject['ReaxiumParameters']["sortedBy"];
-                    $sortDir = !isset($jsonObject['ReaxiumParameters']["sortDir"])? 'desc':$jsonObject['ReaxiumParameters']["sortDir"];
-                    $filter = !isset($jsonObject['ReaxiumParameters']["filter"])? '':$jsonObject['ReaxiumParameters']["filter"];
-                    $limit = !isset($jsonObject['ReaxiumParameters']["limit"])? 10:$jsonObject['ReaxiumParameters']["limit"];
+                    $sortedBy = !isset($jsonObject['ReaxiumParameters']["sortedBy"]) ? 'first_last_name' : $jsonObject['ReaxiumParameters']["sortedBy"];
+                    $sortDir = !isset($jsonObject['ReaxiumParameters']["sortDir"]) ? 'desc' : $jsonObject['ReaxiumParameters']["sortDir"];
+                    $filter = !isset($jsonObject['ReaxiumParameters']["filter"]) ? '' : $jsonObject['ReaxiumParameters']["filter"];
+                    $limit = !isset($jsonObject['ReaxiumParameters']["limit"]) ? 10 : $jsonObject['ReaxiumParameters']["limit"];
 
                     $userTable = TableRegistry::get('Users');
 
-                    if(trim($filter) != '' ){
+                    if (trim($filter) != '') {
                         $whereCondition = array(array('OR' => array(
                             array('first_name LIKE' => '%' . $filter . '%'),
                             array('first_last_name LIKE' => '%' . $filter . '%'),
@@ -703,12 +707,12 @@ class UsersController extends ReaxiumAPIController
                         )));
                         $userFound = $userTable->find()
                             ->where($whereCondition)
-                            ->andWhere(array('status_id'=>1))
-                            ->contain(array("Status", "UserType"))->order(array($sortedBy.' '.$sortDir));
-                    }else{
+                            ->andWhere(array('Users.status_id' => 1))
+                            ->contain(array("Status", "UserType"))->order(array($sortedBy . ' ' . $sortDir));
+                    } else {
                         $userFound = $userTable->find()
-                            ->where(array('status_id'=>1))
-                            ->contain(array("Status", "UserType"))->order(array($sortedBy.' '.$sortDir));
+                            ->where(array('Users.status_id' => 1))
+                            ->contain(array("Status", "UserType"))->order(array($sortedBy . ' ' . $sortDir));
                     }
 
                     $count = $userFound->count();
@@ -802,7 +806,7 @@ class UsersController extends ReaxiumAPIController
                     )));
                     $userFound = $userTable->find()
                         ->where($whereCondition)
-                        ->andWhere(array('status_id'=>1))
+                        ->andWhere(array('Users.status_id' => 1))
                         ->order(array('first_name', 'first_last_name'));
 
                     if ($userFound->count() > 0) {
@@ -1032,7 +1036,8 @@ class UsersController extends ReaxiumAPIController
     /**
      * Service for get type user
      */
-    public function usersTypeList(){
+    public function usersTypeList()
+    {
         Log::info("Looking for the users type list ");
         parent::setResultAsAJson();
         $response = parent::getDefaultReaxiumMessage();
@@ -1041,13 +1046,144 @@ class UsersController extends ReaxiumAPIController
     }
 
 
-    private function getTypeUsersList(){
-        $typeUserTable= TableRegistry::get("UserType");
+    private function getTypeUsersList()
+    {
+        $typeUserTable = TableRegistry::get("UserType");
         $typeUserList = $typeUserTable->find()->order(array("user_type_name"));
         if ($typeUserList->count() > 0) {
             $typeUserList = $typeUserList->toArray();
         }
         return $typeUserList;
+    }
+
+    public function saveUserFromDevice()
+    {
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $object = parent::getJsonReceived();
+        $userName = !isset($object['userName']) ? null : $object['userName'];
+        $userSecondName = !isset($object['userSecondName']) ? null : $object['userSecondName'];
+        $userLastName = !isset($object['userLastName']) ? null : $object['userLastName'];
+        $userSecondLastName = !isset($object['userSecondLastName']) ? null : $object['userSecondLastName'];
+        $userPhoto = !isset($object['userPhoto']) ? null : $object['userPhoto'];
+        $userEmail = !isset($object['userEmail']) ? null : $object['userEmail'];
+        $userBirthDate = !isset($object['userBirthDate']) ? null : $object['userBirthDate'];
+        $userDocumentId = !isset($object['userDocumentId']) ? null : $object['userDocumentId'];
+
+        Log::info('Saving a user through a device, parameters recieved');
+        Log::info('User name: ' . $userName);
+        Log::info('User last name: ' . $userLastName);
+        Log::info('User document id: ' . $userDocumentId);
+        Log::info('User Photo :' . $userPhoto);
+
+        if (isset($userName) && isset($userLastName) && isset($userDocumentId)) {
+            try {
+                $userTable = TableRegistry::get("Users");
+                $userByDocumentID = $userTable->findByDocumentId($userDocumentId);
+                if ($userByDocumentID->count() < 1) {
+                    $newUser = $userTable->newEntity();
+                    $newUser->document_id = $userDocumentId;
+                    $newUser->first_name = $userName;
+                    $newUser->first_last_name = $userLastName;
+                    if (isset($userSecondName)) {
+                        $newUser->second_name = $userSecondName;
+                    }
+                    if (isset($userSecondLastName)) {
+                        $newUser->second_last_name = $userSecondLastName;
+                    }
+                    if (isset($userEmail)) {
+                        $newUser->email = $userEmail;
+                    }
+                    if (isset($userBirthDate)) {
+                        $newUser->birthdate = $userBirthDate;
+                    }
+                    if (isset($userPhoto)) {
+                        $userImageName = $userDocumentId . 'profile_image.jpg';
+                        $imageFullPath = "http://" . $_SERVER['SERVER_NAME'] . BIOMETRIC_FILE_PATH . $userImageName;
+                        $newUser->user_photo = $imageFullPath;
+                        file_put_contents(BIOMETRIC_FILE_FULL_PATH . $userImageName, base64_decode($userPhoto));
+                    }
+                    $userSaved = $userTable->save($newUser);
+                    $response = parent::setSuccessfulSave($response);
+                    $response['ReaxiumResponse']['object'] = array($userSaved);
+
+                } else {
+                    $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$USER_ALREADY_REGISTERED_CODE;
+                    $response['ReaxiumResponse']['message'] = ReaxiumApiMessages::$USER_ALREADY_REGISTERED_MESSAGE;
+                }
+            } catch (\Exception $e) {
+                Log::info('Error saving a user');
+                Log::info($e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+        } else {
+            $response = parent::seInvalidParametersMessage($response);
+        }
+        $this->response->body(json_encode($response));
+    }
+
+
+    public function editUserFromDevice()
+    {
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $object = parent::getJsonReceived();
+        $userName = !isset($object['userName']) ? null : $object['userName'];
+        $userSecondName = !isset($object['userSecondName']) ? null : $object['userSecondName'];
+        $userLastName = !isset($object['userLastName']) ? null : $object['userLastName'];
+        $userSecondLastName = !isset($object['userSecondLastName']) ? null : $object['userSecondLastName'];
+        $userPhoto = !isset($object['userPhoto']) ? null : $object['userPhoto'];
+        $userEmail = !isset($object['userEmail']) ? null : $object['userEmail'];
+        $userBirthDate = !isset($object['userBirthDate']) ? null : $object['userBirthDate'];
+        $userDocumentId = !isset($object['userDocumentId']) ? null : $object['userDocumentId'];
+        $userId = !isset($object['userId']) ? null : $object['userId'];
+
+        Log::info('editing a user through a device, parameters recieved');
+        Log::info('User ID :' . $userId);
+        Log::info('User name: ' . $userName);
+        Log::info('User last name: ' . $userLastName);
+        Log::info('User document id: ' . $userDocumentId);
+        Log::info('User Photo :' . $userPhoto);
+
+        if (isset($userId) && isset($userName) && isset($userLastName) && isset($userDocumentId)) {
+            try {
+                $userTable = TableRegistry::get("Users");
+                $User = $userTable->newEntity();
+                $User->user_id = $userId;
+                $User->document_id = $userDocumentId;
+                $User->first_name = $userName;
+                $User->first_last_name = $userLastName;
+                if (isset($userSecondName)) {
+                    $User->second_name = $userSecondName;
+                }
+                if (isset($userSecondLastName)) {
+                    $User->second_last_name = $userSecondLastName;
+                }
+                if (isset($userEmail)) {
+                    $User->email = $userEmail;
+                }
+                if (isset($userBirthDate)) {
+                    $User->birthdate = $userBirthDate;
+                }
+                if (isset($userPhoto)) {
+                    $userImageName = $userDocumentId . 'profile_image.jpg';
+                    $imageFullPath = "http://" . $_SERVER['SERVER_NAME'] . BIOMETRIC_FILE_PATH . $userImageName;
+                    $User->user_photo = $imageFullPath;
+                    file_put_contents(BIOMETRIC_FILE_FULL_PATH . $userImageName, base64_decode($userPhoto));
+                }
+                $userSaved = $userTable->save($User);
+                $response = parent::setSuccessfulSave($response);
+                $response['ReaxiumResponse']['object'] = array($userSaved);
+
+            } catch (\Exception $e) {
+                Log::info('Error saving a user');
+                Log::info($e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+        } else {
+            $response = parent::seInvalidParametersMessage($response);
+        }
+        $this->response->body(json_encode($response));
     }
 
 

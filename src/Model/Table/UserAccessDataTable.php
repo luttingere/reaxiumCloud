@@ -15,6 +15,7 @@ class UserAccessDataTable extends Table{
         $this->table('user_access_data');
         $this->primaryKey('user_access_data_id');
         $this->belongsTo('Users' ,array('foreignKey' => 'user_id'));
+        $this->belongsTo('AccessType' ,array('foreignKey' => 'access_type_id'));
     }
 
 
