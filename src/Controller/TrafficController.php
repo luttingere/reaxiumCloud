@@ -37,43 +37,43 @@ class TrafficController extends ReaxiumAPIController
      *
      * @apiSuccessExample Success-Response:
      *     HTTP/1.1 200 OK
-        {
-            "ReaxiumResponse": {
-                "code": 0,
-                "message": "SUCCESSFUL REQUEST",
-                "object": [{
-                    "datetime": "2016-03-28T16:27:11+0000",
-                    "reaxium_device": {
-                        "device_id": 1,
-                        "device_name": "Test"},
-                    "traffic_type": {
-                        "traffic_type_name": "IN"
-                        },
-                    "user": {
-                        "user_id": 1,
-                        "first_name": "Eduardo",
-                        "first_last_name": "Luttinger",
-                        "document_id": "19044081"
-                    }
-            },{
-                "datetime": "2016-03-28T16:26:56+0000",
-               "reaxium_device": {
-                    "device_id": 1,
-                    "device_name": "Test"
-                    },
-                "traffic_type": {
-                    "traffic_type_name": "OUT"
-                    },
-                "user": {
-                    "user_id": 1,
-                    "first_name": "Eduardo",
-                    "first_last_name": "Luttinger",
-                    "document_id": "19044081"
-                }
-            }
-            ]
-        }
-      }
+     * {
+     * "ReaxiumResponse": {
+     * "code": 0,
+     * "message": "SUCCESSFUL REQUEST",
+     * "object": [{
+     * "datetime": "2016-03-28T16:27:11+0000",
+     * "reaxium_device": {
+     * "device_id": 1,
+     * "device_name": "Test"},
+     * "traffic_type": {
+     * "traffic_type_name": "IN"
+     * },
+     * "user": {
+     * "user_id": 1,
+     * "first_name": "Eduardo",
+     * "first_last_name": "Luttinger",
+     * "document_id": "19044081"
+     * }
+     * },{
+     * "datetime": "2016-03-28T16:26:56+0000",
+     * "reaxium_device": {
+     * "device_id": 1,
+     * "device_name": "Test"
+     * },
+     * "traffic_type": {
+     * "traffic_type_name": "OUT"
+     * },
+     * "user": {
+     * "user_id": 1,
+     * "first_name": "Eduardo",
+     * "first_last_name": "Luttinger",
+     * "document_id": "19044081"
+     * }
+     * }
+     * ]
+     * }
+     * }
      *
      *
      * @apiErrorExample Error-Response Traffic Not Found:
@@ -173,50 +173,50 @@ class TrafficController extends ReaxiumAPIController
      *
      * @apiSuccessExample Success-Response:
      *     HTTP/1.1 200 OK
-    {
-        "ReaxiumResponse": {
-           "code": 0,
-           "message": "SUCCESSFUL REQUEST",
-           "object": [{
-                "datetime": "2016-03-28T16:27:11+0000",
-                "reaxium_device": {
-                "device_id": 1,
-                "device_name": "Test"},
-                "traffic_type": {
-                "traffic_type_name": "IN"
-            },
-            "user": {
-                "user_id": 1,
-                "first_name": "Eduardo",
-                "first_last_name": "Luttinger",
-                "document_id": "19044081"
-                }
-    },{
-            "datetime": "2016-03-28T16:26:56+0000",
-                "reaxium_device": {
-                    "device_id": 1,
-                    "device_name": "Test"
-                    },
-            "traffic_type": {
-                "traffic_type_name": "OUT"
-            },
-            "user": {
-                "user_id": 4,
-                "first_name": "Diana",
-                "first_last_name": "Mogollon",
-                "document_id": "6910229"
-             }
-         }]
-        }
-       }
+     * {
+     * "ReaxiumResponse": {
+     * "code": 0,
+     * "message": "SUCCESSFUL REQUEST",
+     * "object": [{
+     * "datetime": "2016-03-28T16:27:11+0000",
+     * "reaxium_device": {
+     * "device_id": 1,
+     * "device_name": "Test"},
+     * "traffic_type": {
+     * "traffic_type_name": "IN"
+     * },
+     * "user": {
+     * "user_id": 1,
+     * "first_name": "Eduardo",
+     * "first_last_name": "Luttinger",
+     * "document_id": "19044081"
+     * }
+     * },{
+     * "datetime": "2016-03-28T16:26:56+0000",
+     * "reaxium_device": {
+     * "device_id": 1,
+     * "device_name": "Test"
+     * },
+     * "traffic_type": {
+     * "traffic_type_name": "OUT"
+     * },
+     * "user": {
+     * "user_id": 4,
+     * "first_name": "Diana",
+     * "first_last_name": "Mogollon",
+     * "document_id": "6910229"
+     * }
+     * }]
+     * }
+     * }
      *
      *
      * @apiErrorExample Error-Response Traffic Not Found:
      * {
      *  "ReaxiumResponse": {
-         * "code": 404,
-         * "message": "No traffic found",
-         * "object": []
+     * "code": 404,
+     * "message": "No traffic found",
+     * "object": []
      *   }
      * }
      *
@@ -252,7 +252,8 @@ class TrafficController extends ReaxiumAPIController
                 if (isset($jsonObject['ReaxiumParameters']["Traffic"])) {
                     if (isset($jsonObject['ReaxiumParameters']["Traffic"]['device_id'])
                         && isset($jsonObject['ReaxiumParameters']["Traffic"]['date_init'])
-                        && isset($jsonObject['ReaxiumParameters']["Traffic"]['date_end'])){
+                        && isset($jsonObject['ReaxiumParameters']["Traffic"]['date_end'])
+                    ) {
 
                         $deviceId = $jsonObject['ReaxiumParameters']["Traffic"]['device_id'];
                         $dateInit = ReaxiumUtil::getDate($jsonObject['ReaxiumParameters']["Traffic"]['date_init']);
@@ -296,16 +297,68 @@ class TrafficController extends ReaxiumAPIController
     {
         $trafficTable = TableRegistry::get("Traffic");
         $trafficFound = $trafficTable->find('all',
-            array('fields' => array('Traffic.datetime','Users.user_id','Users.first_name','Users.first_last_name','Users.document_id','TrafficType.traffic_type_name','ReaxiumDevice.device_id','ReaxiumDevice.device_name'),
+            array('fields' => array('Traffic.datetime', 'Users.user_id', 'Users.first_name', 'Users.first_last_name', 'Users.document_id', 'TrafficType.traffic_type_name', 'ReaxiumDevice.device_id', 'ReaxiumDevice.device_name'),
                 'conditions' => array('Traffic.user_id' => $userId,
                     'Traffic.datetime >=' => $dateInit,
-                    'Traffic.datetime <=' => $dateEnd)))->contain(array('Users', 'TrafficType','ReaxiumDevice'));
+                    'Traffic.datetime <=' => $dateEnd)))->contain(array('Users', 'TrafficType', 'ReaxiumDevice'));
         if ($trafficFound->count() > 0) {
             $trafficFound = $trafficFound->toArray();
         } else {
             $trafficFound = null;
         }
         return $trafficFound;
+    }
+
+    /**
+     *
+     * get all information of the traffic made by one user with a specific filter
+     *
+     * @param $userId
+     * @param $filter
+     * @param $sortedBy
+     * @param $sortDir
+     * @return $this|array|null
+     */
+    private function getTrafficFilteredByUser($userId, $filter,$sortedBy,$sortDir)
+    {
+        $trafficTable = TableRegistry::get("Traffic");
+        $trafficFound = $trafficTable->find('all',
+            array('fields' => array('Traffic.datetime', 'TrafficType.traffic_type_name', 'ReaxiumDevice.device_id', 'ReaxiumDevice.device_name'),
+                'conditions' => array('Traffic.user_id' => $userId,
+                    array('OR' => array(array('datetime LIKE' => '%' . $filter . '%'),
+                    array('TrafficType.traffic_type_name LIKE' => '%' . $filter . '%'))))))->contain(array('TrafficType', 'ReaxiumDevice'))->order(array($sortedBy . ' ' . $sortDir));
+
+        if ($trafficFound->count() > 0) {
+            $trafficFound = $trafficFound->toArray();
+        } else {
+            $trafficFound = null;
+        }
+        return $trafficFound;
+    }
+
+
+
+    /**
+     *
+     * Store an access to the system
+     *
+     * @param $userId
+     * @param $traffic_type
+     * @param $access_id
+     * @param $deviceId
+     * @param $trafficInfo
+     * @return mixed
+     */
+    private function registerTraffic($userId, $traffic_type, $access_id, $deviceId, $trafficInfo)
+    {
+        $trafficTable = TableRegistry::get("Traffic");
+        $trafficRecord = $trafficTable->newEntity();
+        $trafficRecord->traffic_type_id = $traffic_type;
+        $trafficRecord->user_id = $userId;
+        $trafficRecord->access_id = $access_id;
+        $trafficRecord->device_id = $deviceId;
+        $trafficRecord->traffic_info = $trafficInfo;
+        $trafficTable->save($trafficRecord);
     }
 
 
@@ -321,10 +374,10 @@ class TrafficController extends ReaxiumAPIController
     {
         $trafficTable = TableRegistry::get("Traffic");
         $trafficFound = $trafficTable->find('all',
-            array('fields' => array('Traffic.datetime','Users.user_id','Users.first_name','Users.first_last_name','Users.document_id','TrafficType.traffic_type_name','ReaxiumDevice.device_id','ReaxiumDevice.device_name'),
+            array('fields' => array('Traffic.datetime', 'Users.user_id', 'Users.first_name', 'Users.first_last_name', 'Users.document_id', 'TrafficType.traffic_type_name', 'ReaxiumDevice.device_id', 'ReaxiumDevice.device_name'),
                 'conditions' => array('Traffic.device_id' => $deviceId,
                     'Traffic.datetime >=' => $dateInit,
-                    'Traffic.datetime <=' => $dateEnd)))->contain(array('Users', 'TrafficType','ReaxiumDevice'));
+                    'Traffic.datetime <=' => $dateEnd)))->contain(array('Users', 'TrafficType', 'ReaxiumDevice'));
         if ($trafficFound->count() > 0) {
             $trafficFound = $trafficFound->toArray();
         } else {
