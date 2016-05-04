@@ -12,9 +12,9 @@ class ReaxiumApiMessages
 
     public static $SUCCESS_CODE = 00;
     public static $SUCCESS_MESSAGE = 'SUCCESSFUL REQUEST';
-    public static $SUCCESS_SAVE_MESSAGE = 'SAVED SUCCESSFUL';
-    public static $SUCCESS_DELETED_MESSAGE = 'DELETED SUCCESSFUL';
-    public static $SUCCESS_UPDATED_MESSAGE = 'UPDATED SUCCESSFUL';
+    public static $SUCCESS_SAVE_MESSAGE = 'SAVED SUCCESSFULLY';
+    public static $SUCCESS_DELETED_MESSAGE = 'DELETED SUCCESSFULLY';
+    public static $SUCCESS_UPDATED_MESSAGE = 'UPDATED SUCCESSFULLY';
     public static $SUCCESS_ACCESS = 'ACCESS GRANTED';
 
 

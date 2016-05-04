@@ -25,8 +25,8 @@ class BusinessController extends ReaxiumAPIController
      *      {"ReaxiumParameters": {
      *          "Business": {
      *              "business_id": null,
-     *              "business_name": "Business Name",
-     *              "business_id_number": "J-00010001001"
+     *              "business_name": "Luis Edgardo Eguie Arocha",
+     *              "business_id_number": "J-0001044444566555"
      *               },
      *           "BusinessAddress":{
      *                 "address_id":null,
@@ -47,8 +47,8 @@ class BusinessController extends ReaxiumAPIController
      *      {"ReaxiumParameters": {
      *          "Business": {
      *              "business_id": 1,
-     *              "business_name": "Business Name",
-     *              "business_id_number": "J-00010001001"
+     *              "business_name": "Luis Edgardo Eguie Arocha",
+     *              "business_id_number": "J-0001044444566555"
      *               },
      *           "BusinessAddress":{
      *                 "address_id":15,
@@ -66,7 +66,19 @@ class BusinessController extends ReaxiumAPIController
      *
      * @apiSuccessExample Success-Response:
      *     HTTP/1.1 200 OK
-     *
+             {
+                "ReaxiumResponse": {
+                    "code": 0,
+                    "message": "SAVED SUCCESSFUL",
+                    "object": {
+                        "business_name": "Luis Edgardo Eguie Arocha",
+                        "business_id_number": "J-0001044444566555",
+                        "address_id": 27,
+                        "phone_number_id": 70,
+                        "business_id": 4
+                    }
+                }
+            }
      *
      *
      * @apiErrorExample Error-Response Invalid Parameters:
@@ -184,13 +196,71 @@ class BusinessController extends ReaxiumAPIController
      *              "limit": "10",
      *              "sortDir": "desc",
      *              "sortedBy": "business_name"
+     *              "filter":""
      *          }
      *       }
      *
      *
      * @apiSuccessExample Success-Response:
      *     HTTP/1.1 200 OK
-     *
+     *    {
+            "ReaxiumResponse": {
+                    "code": 0,
+                    "message": "SUCCESSFUL REQUEST",
+                    "object": [
+                    {
+                    "business_id": 1,
+                    "business_name": "Reaxium Admin System",
+                    "business_id_number": "Reaxium-0001",
+                    "address_id": 1,
+                    "phone_number_id": 1,
+                    "status_id": 1,
+                    "status": {
+                    "status_id": 1,
+                    "status_name": "ACTIVE"
+                    }
+                    },
+                    {
+                    "business_id": 4,
+                    "business_name": "Luis Edgardo Eguie Arocha",
+                    "business_id_number": "J-0001044444566555",
+                    "address_id": 27,
+                    "phone_number_id": 70,
+                    "status_id": 1,
+                    "status": {
+                    "status_id": 1,
+                    "status_name": "ACTIVE"
+                    }
+                    },
+                    {
+                    "business_id": 3,
+                    "business_name": "Las Comunitarias",
+                    "business_id_number": "J-00010444445555",
+                    "address_id": 26,
+                    "phone_number_id": 69,
+                    "status_id": 1,
+                    "status": {
+                    "status_id": 1,
+                    "status_name": "ACTIVE"
+                    }
+                    },
+                    {
+                    "business_id": 2,
+                    "business_name": "Antonio Ortega Ordoñez",
+                    "business_id_number": "J-000102222201",
+                    "address_id": 25,
+                    "phone_number_id": 68,
+                    "status_id": 1,
+                    "status": {
+                    "status_id": 1,
+                    "status_name": "ACTIVE"
+                    }
+                    }
+                    ],
+                    "totalRecords": 4,
+                    "totalPages": 1
+                }
+            }
      *
      *
      * @apiErrorExample Error-Response Invalid Parameters:
@@ -273,11 +343,11 @@ class BusinessController extends ReaxiumAPIController
             $whereCondition = array(array('OR' => array(
                 array('business_name LIKE' => '%' . $filter . '%'),
                 array('business_id_number LIKE' => '%' . $filter . '%')
-            )), 'status_id' => '1');
-            $AllBusinessObject = $businessTable->find()->where($whereCondition)->order(array($sortedBy . ' ' . $sortDir));
+            )), 'Business.status_id' => '1');
+            $AllBusinessObject = $businessTable->find()->where($whereCondition)->order(array($sortedBy . ' ' . $sortDir))->contain(array('Status'));
         } else {
-            $whereCondition = array('status_id' => '1');
-            $AllBusinessObject = $businessTable->find()->where($whereCondition)->order(array($sortedBy . ' ' . $sortDir));
+            $whereCondition = array('Business.status_id' => '1');
+            $AllBusinessObject = $businessTable->find()->where($whereCondition)->order(array($sortedBy . ' ' . $sortDir))->contain(array('Status'));
         }
         return $AllBusinessObject;
     }
@@ -300,7 +370,37 @@ class BusinessController extends ReaxiumAPIController
      *
      * @apiSuccessExample Success-Response:
      *     HTTP/1.1 200 OK
-     *
+             {
+                "ReaxiumResponse": {
+                    "code": 0,
+                    "message": "SUCCESSFUL REQUEST",
+                    "object": [
+                        {
+                        "business_id": 1,
+                        "business_name": "Reaxium Admin System",
+                        "business_id_number": "Reaxium-0001",
+                        "address_id": 1,
+                        "phone_number_id": 1,
+                        "status_id": 1,
+                        "phone_number": {
+                        "phone_number_id": 1,
+                        "phone_name": "Mi Casa",
+                        "phone_number": "0212-3734832"
+                        },
+                        "addres": {
+                        "address_id": 1,
+                        "address": "Miranda, San antonio de los altos, urbanizacion OPS torre 4, 1204",
+                        "latitude": "10.37706",
+                        "longitude": "-66.95635"
+                        },
+                        "status": {
+                        "status_id": 1,
+                        "status_name": "ACTIVE"
+                        }
+                        }
+                    ]
+                }
+            }
      *
      *
      * @apiErrorExample Error-Response Invalid Parameters:
@@ -368,7 +468,7 @@ class BusinessController extends ReaxiumAPIController
      *
      *      {"ReaxiumParameters": {
      *              "Business": {
-                       "filter":"j-5668"
+                       "filter":"Las Comuni"
      *            }
      *          }
      *       }
@@ -376,6 +476,26 @@ class BusinessController extends ReaxiumAPIController
      *
      * @apiSuccessExample Success-Response:
      *     HTTP/1.1 200 OK
+            {
+                "ReaxiumResponse": {
+                    "code": 0,
+                    "message": "SUCCESSFUL REQUEST",
+                    "object": [
+                        {
+                        "business_id": 3,
+                        "business_name": "Las Comunitarias",
+                        "business_id_number": "J-00010444445555",
+                        "address_id": 26,
+                        "phone_number_id": 69,
+                        "status_id": 1,
+                        "status": {
+                            "status_id": 1,
+                            "status_name": "ACTIVE"
+                            }
+                        }
+                    ]
+                }
+            }
      *
      *
      *
@@ -452,6 +572,88 @@ class BusinessController extends ReaxiumAPIController
         }
         return $businessObject;
     }
+
+
+
+
+    /**
+     * @api {post} /Business/deleteBusiness delete
+     * @apiName allBusinessFiltered
+     * @apiGroup Business
+     *
+     * @apiParamExample {json} Request:
+     *
+     *      {"ReaxiumParameters": {
+     *              "Business": {
+                    "business_id":"1"
+     *            }
+     *          }
+     *       }
+     *
+     *
+     * @apiSuccessExample Success-Response:
+     *     HTTP/1.1 200 OK
+            {
+                "ReaxiumResponse": {
+                "code": 0,
+                "message": "DELETED SUCCESSFULLY",
+                "object": []
+                  }
+            }
+     *
+     *
+     * @apiErrorExample Error-Response Invalid Parameters:
+     *      {"ReaxiumResponse": {
+     *          "code": 2,
+     *          "message": "Invalid Parameters received, please checkout the api documentation",
+     *          "object": []
+     *          }
+     *      }
+     *
+     *
+     * @apiErrorExample Error-Response Invalid Json Object:
+     *      {"ReaxiumResponse": {
+     *          "code": 2,
+     *          "message": "Invalid Parameters received, please checkout the api documentation",
+     *          "object": []
+     *          }
+     *      }
+     */
+    public function deleteBusiness(){
+        Log::info("delete a business service invoked");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+        Log::info('Object received: ' . json_encode($jsonObject));
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
+            try {
+                if (isset($jsonObject['ReaxiumParameters']["Business"]["business_id"])) {
+
+                    $businessId = $jsonObject['ReaxiumParameters']["Business"]["business_id"];
+                    Log::info("DeviceId Recieved: ".$businessId);
+                    $businessFound = $this->lookupABusinessByID($businessId);
+
+                    if (isset($businessFound)) {
+                        $this->deleteABusiness($businessId);
+                        $response = parent::setSuccessfulDelete($response);
+                    } else {
+                        $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                        $response['ReaxiumResponse']['message'] = 'No Business found';
+                    }
+                } else {
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+            } catch (\Exception $e) {
+                Log::info("Error getting all business information " . $e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+        } else {
+            $response = parent::setInvalidJsonMessage($response);
+        }
+        Log::info("Responde Object: " . json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
 
     /**
      * soft delete of a business on the system
