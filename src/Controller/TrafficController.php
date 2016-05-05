@@ -349,16 +349,19 @@ class TrafficController extends ReaxiumAPIController
      * @param $trafficInfo
      * @return mixed
      */
-    private function registerTraffic($userId, $traffic_type, $access_id, $deviceId, $trafficInfo)
+    public function registerATraffic($userId, $traffic_type, $access_id, $deviceId, $trafficInfo)
     {
+        $result = null;
         $trafficTable = TableRegistry::get("Traffic");
         $trafficRecord = $trafficTable->newEntity();
         $trafficRecord->traffic_type_id = $traffic_type;
         $trafficRecord->user_id = $userId;
         $trafficRecord->access_id = $access_id;
         $trafficRecord->device_id = $deviceId;
+        $trafficRecord->datetime = ReaxiumUtil::getSystemDate();
         $trafficRecord->traffic_info = $trafficInfo;
-        $trafficTable->save($trafficRecord);
+        $result = $trafficTable->save($trafficRecord);
+        return $result;
     }
 
 

@@ -502,6 +502,41 @@ class AccessController extends ReaxiumAPIController
     }
 
 
+
+    public function registerAUserAccess($userId,$deviceId,$accessTypeId,$trafficType,$trafficInfo){
+        $result = null;
+        $accessId = $this->getAccessIdOfAnAccess($userId,$deviceId,$accessTypeId);
+        if(isset($accessId)) {
+            $trafficController = new TrafficController();
+            $trafficSaved = $trafficController->registerATraffic($userId,$trafficType,$accessId,$deviceId,$trafficInfo);
+            if($trafficSaved){
+                $result = $trafficSaved;
+            }
+        }
+        return $result;
+    }
+
+
+    private function getAccessIdOfAnAccess($userId, $deviceId, $accessTypeId)
+    {
+        $result = null;
+        $userDataAccessTable = TableRegistry::get("UserAccessData");
+        $userDataAccessObject = $userDataAccessTable->find()->where(array('user_id' => $userId, 'access_type_id' => $accessTypeId));
+        if ($userDataAccessObject->count() > 0) {
+            $userDataAccessObject = $userDataAccessObject->toArray();
+            $userAccessDataId = $userDataAccessObject[0]['user_access_data_id'];
+            $userAccessControlTable = TableRegistry::get("UserAccessControl");
+            $userAccessControlObject = $userAccessControlTable->find()->where(array('user_access_data_id' => $userAccessDataId, 'device_id' => $deviceId));
+            if($userAccessControlObject->count() > 0){
+                $userAccessControlObject = $userAccessControlObject->toArray();
+                $accessId = $userAccessControlObject[0]['access_id'];
+                $result = $accessId;
+            }
+        }
+        return $result;
+    }
+
+
     /**
      * @api {post} /Access/checkUserAccess Login to the system with a Device
      * @apiName checkUserAccess
@@ -707,8 +742,8 @@ class AccessController extends ReaxiumAPIController
     private function getUserDataAccessInfo($arrayOfConditions)
     {
         $access = TableRegistry::get("UserAccessData");
-        $access = $access->find()->where($arrayOfConditions)->contain(array('Users' =>array('UserType','Status')));
-        if($access->count() > 0){
+        $access = $access->find()->where($arrayOfConditions)->contain(array('Users' => array('UserType', 'Status')));
+        if ($access->count() > 0) {
             $access = $access->toArray();
         } else {
             $access = null;
@@ -718,7 +753,8 @@ class AccessController extends ReaxiumAPIController
 
 
     //TODO nuevo servicio pendiente documentacion
-    public function createAccessNewUser(){
+    public function createAccessNewUser()
+    {
 
         Log::info("Create Access Service invoked");
 
@@ -767,22 +803,20 @@ class AccessController extends ReaxiumAPIController
                     Log::info('Error loading the access information for the user: ' . $user_id);
                     Log::info($e->getMessage());
 
-                    if($e->getCode()== 23000){
+                    if ($e->getCode() == 23000) {
                         $response['ReaxiumResponse']['code'] = '1';
                         $response['ReaxiumResponse']['message'] = "Login and Password Invalid try again";
                         $response['ReaxiumResponse']['object'] = [];
-                    }else{
+                    } else {
                         $response = parent::setInternalServiceError($response);
                     }
 
                 }
-            }
-            else{
+            } else {
                 Log::info("Se quedo aqui");
                 $response = parent::seInvalidParametersMessage($response);
             }
-        }
-        else {
+        } else {
             $response = parent::seInvalidParametersMessage($response);
         }
 
@@ -793,84 +827,85 @@ class AccessController extends ReaxiumAPIController
     /**
      *
      */
-    public function checkAccessControlByUser(){
+    public function checkAccessControlByUser()
+    {
 
         Log::info("cheack Access Service invoked");
 
         parent::setResultAsAJson();
         $response = parent::getDefaultReaxiumMessage();
         $jsonObject = parent::getJsonReceived();
-        $arrayFinal=[];
+        $arrayFinal = [];
 
-        if(parent::validReaxiumJsonHeader($jsonObject)){
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
 
             $user_id = !isset($jsonObject["ReaxiumParameters"]["ReaxiumDevice"]["user_id"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumDevice"]["user_id"];
             $device_id = !isset($jsonObject["ReaxiumParameters"]["ReaxiumDevice"]["device_id"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumDevice"]["device_id"];
 
 
-            if(isset($user_id) && isset($device_id)){
-                try{
+            if (isset($user_id) && isset($device_id)) {
+                try {
                     $userDataAccess = TableRegistry::get("UserAccessData");
                     $userDataAccess = $userDataAccess->findByUserId($user_id);
 
 
-                    if($userDataAccess->count() > 0){
+                    if ($userDataAccess->count() > 0) {
 
                         $userAccessControlTable = TableRegistry::get("UserAccessControl");
 
-                       $userDataAccessTable = $userDataAccess->toArray();
+                        $userDataAccessTable = $userDataAccess->toArray();
 
-                        foreach($userDataAccessTable as $accessData){
+                        foreach ($userDataAccessTable as $accessData) {
 
-                            if($this->validateAccessControl($device_id,$accessData['user_access_data_id'],$userAccessControlTable)){
-                                array_push($arrayFinal,$accessData);
+                            if ($this->validateAccessControl($device_id, $accessData['user_access_data_id'], $userAccessControlTable)) {
+                                array_push($arrayFinal, $accessData);
                             }
                         }
 
                         Log::info(json_encode($arrayFinal));
 
-                        if(count($arrayFinal) > 0){
+                        if (count($arrayFinal) > 0) {
                             $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$SUCCESS_CODE;
                             $response['ReaxiumResponse']['message'] = ReaxiumApiMessages::$SUCCESS_MESSAGE;
                             $response['ReaxiumResponse']['object'] = $arrayFinal;
 
-                        }else{
+                        } else {
                             $response['ReaxiumResponse']['code'] = '2';
                             $response['ReaxiumResponse']['message'] = "All access is already configured for this user";
                             $response['ReaxiumResponse']['object'] = [];
 
                         }
-                    }else{
+                    } else {
                         $response['ReaxiumResponse']['code'] = "1";
                         $response['ReaxiumResponse']['message'] = "Not get data by user";
                         $response['ReaxiumResponse']['object'] = [];
 
                     }
 
-                }catch(\Exception $e){
+                } catch (\Exception $e) {
                     Log::info('Error loading the access information for the user: ' . $user_id);
                     Log::info($e->getMessage());
                     $response = parent::setInternalServiceError($response);
                 }
             }
-        }
-        else{
+        } else {
             $response = parent::seInvalidParametersMessage($response);
         }
         $this->response->body(json_encode($response));
     }
 
 
-    private function validateAccessControl($device_id,$user_access_data_id,$userAccessControlTable){
+    private function validateAccessControl($device_id, $user_access_data_id, $userAccessControlTable)
+    {
 
-        Log::info("Device: ".$device_id . " Access: ".$user_access_data_id);
+        Log::info("Device: " . $device_id . " Access: " . $user_access_data_id);
         $validate = true;
 
-        $userAccessControl = $userAccessControlTable->findByDeviceIdAndUserAccessDataId($device_id,$user_access_data_id);
+        $userAccessControl = $userAccessControlTable->findByDeviceIdAndUserAccessDataId($device_id, $user_access_data_id);
 
         Log::info($userAccessControl->count());
 
-        if($userAccessControl->count() > 0){
+        if ($userAccessControl->count() > 0) {
             $validate = false;
         }
 
@@ -878,7 +913,8 @@ class AccessController extends ReaxiumAPIController
     }
 
 
-    public function addDeviceAccessData(){
+    public function addDeviceAccessData()
+    {
 
         Log::info("Insert access relationship device Service invoked");
 
@@ -887,49 +923,48 @@ class AccessController extends ReaxiumAPIController
         $jsonObject = parent::getJsonReceived();
         $validate = true;
 
-        if(parent::validReaxiumJsonHeader($jsonObject)){
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
 
             $arrayObj = !isset($jsonObject["ReaxiumParameters"]["ReaxiumDevice"]["object"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumDevice"]["object"];
 
-            if(isset($arrayObj)){
+            if (isset($arrayObj)) {
 
-                if(count($arrayObj) > 0){
+                if (count($arrayObj) > 0) {
 
-                    try{
+                    try {
                         Log::info($arrayObj);
                         $userAccessControlTable = TableRegistry::get("UserAccessControl");
                         $userAccessData = $userAccessControlTable->newEntities($arrayObj);
 
-                        foreach($userAccessData as $entity){
+                        foreach ($userAccessData as $entity) {
 
-                            if(!$userAccessControlTable->save($entity)){
-                                $validate=false;
-                               break;
+                            if (!$userAccessControlTable->save($entity)) {
+                                $validate = false;
+                                break;
                             }
                         }
 
-                        if($validate){
+                        if ($validate) {
                             $response = parent::setSuccessfulResponse($response);
-                        }else{
+                        } else {
                             Log::info('Error insertando elemento en tabla users_access_control');
                             $response = parent::setInternalServiceError($response);
                         }
 
-                    }
-                    catch (\Exception $e){
+                    } catch (\Exception $e) {
                         Log::info('Error loading the access information for the user: ');
                         Log::info($e->getMessage());
                         $response = parent::setInternalServiceError($response);
                     }
 
-                }else{
+                } else {
                     $response = parent::seInvalidParametersMessage($response);
                 }
-            }else{
+            } else {
                 $response = parent::seInvalidParametersMessage($response);
             }
 
-        }else{
+        } else {
             $response = parent::seInvalidParametersMessage($response);
         }
         $this->response->body(json_encode($response));
