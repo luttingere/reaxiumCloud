@@ -1268,4 +1268,211 @@ class DeviceController extends ReaxiumAPIController
     }
 
 
+    public function deleteRouteByDevice(){
+
+        Log::info("deleting  Route relation with device running");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+        $id_device_route = null;
+
+        try{
+            if(parent::validReaxiumJsonHeader($jsonObject)){
+
+                $id_device_route = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['id_device_routes'])? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['id_device_routes'];
+                $deviceRouteTable = TableRegistry::get('DeviceRoutes');
+                $whereCondition = array('id_device_routes'=>$id_device_route);
+                $deviceRouteTable->deleteAll($whereCondition);
+
+                $response = parent::setSuccessfulDelete($response);
+
+
+            }else{
+                $response = parent::seInvalidParametersMessage($response);
+            }
+        }
+        catch(\Exception $e){
+            Log::info("Error deleting the route: " . $id_device_route . " error:" . $e->getMessage());
+            $response = parent::setInternalServiceError($response);
+        }
+
+        Log::info("Responde Object: " . json_encode($response));
+        $this->response->body(json_encode($response));
+
+    }
+
+    //TODO falta documentacion ojo quede aqui!
+    public function getUsersByDevice(){
+
+        Log::info("synchronize a device service");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+
+        if(parent::validReaxiumJsonHeader($jsonObject)){
+
+            try{
+
+                $device_id = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id'])? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id'];
+                $page = $jsonObject['ReaxiumParameters']['ReaxiumDevice']["page"];
+                $sortedBy = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']["sortedBy"]) ? 'first_last_name' : $jsonObject['ReaxiumParameters']['ReaxiumDevice']["sortedBy"];
+                $sortDir = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']["sortDir"]) ? 'desc' : $jsonObject['ReaxiumParameters']['ReaxiumDevice']["sortDir"];
+                $filter = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']["filter"]) ? '' : $jsonObject['ReaxiumParameters']['ReaxiumDevice']["filter"];
+                $limit = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']["limit"]) ? 10 : $jsonObject['ReaxiumParameters']['ReaxiumDevice']["limit"];
+
+
+                if(isset($device_id)){
+
+                    $reaxiumDevice = $this->getDeviceInfo($device_id);
+
+                    if(isset($reaxiumDevice)){
+
+                        if ($reaxiumDevice[0]['status_id'] == 1) {
+
+                            if ($reaxiumDevice[0]['configured'] == 1) {
+
+                                $deviceAccessData = $this->getDeviceAccessDataUsers($device_id,$filter,$sortedBy,$sortDir);
+
+                                $count = $deviceAccessData->count();
+                                $this->paginate = array('limit' => $limit, 'page' => $page);
+                                $deviceAccessFound = $this->paginate($deviceAccessData);
+
+
+                                if($deviceAccessFound->count()>0){
+
+                                    $maxPages = floor((($count - 1) / $limit) + 1);
+                                    $deviceAccessFound = $deviceAccessFound->toArray();
+                                    $response['ReaxiumResponse']['totalRecords'] = $count;
+                                    $response['ReaxiumResponse']['totalPages'] = $maxPages;
+                                    $response['ReaxiumResponse']['object'] = $deviceAccessFound;
+                                    $response = parent::setSuccessfulResponse($response);
+                                }
+                                else{
+                                    $response['ReaxiumResponse']['code'] = '99';
+                                    $response['ReaxiumResponse']['message'] = 'Devices has user relation';
+                                }
+
+                            } else {
+                                $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$DEVICE_NOT_CONFIGURED_CODE;
+                                $response['ReaxiumResponse']['message'] = ReaxiumApiMessages::$DEVICE_NOT_CONFIGURED_MESSAGE;
+                            }
+
+                        }else{
+                            $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_STATUS_CODE;
+                            $response['ReaxiumResponse']['message'] = ReaxiumApiMessages::$INVALID_STATUS_MESSAGE;
+                        }
+                    }
+                    else{
+                        $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                        $response['ReaxiumResponse']['message'] = 'No device found with the id: ' . $device_id;
+                    }
+                }
+                else{
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+            }
+            catch (\Exception $e){
+                Log::info("Error: " . $e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+        }else{
+            $response = parent::setInvalidJsonMessage($response);
+        }
+
+        Log::info("Responde Object: " . json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
+
+    private function getDeviceAccessDataUsers($deviceId,$filter,$sortedBy,$sortDir){
+
+        $userAccessControlTable = TableRegistry::get("UserAccessControl");
+
+        if($filter != ""){
+
+            $whereCondition = array(array('OR' => array(
+                array('first_name LIKE' => '%' . $filter . '%'),
+                array('first_last_name LIKE' => '%' . $filter . '%'),
+                array('document_id LIKE' => '%' . $filter . '%')
+            )));
+
+            $userAccessControl = $userAccessControlTable->find('All',
+                array('fields' => array('UserAccessData.user_id',
+                    'UserAccessData.user_access_data_id',
+                    'Users.first_name',
+                    'Users.second_name',
+                    'Users.first_last_name',
+                    'Users.user_photo',
+                    'Users.birthdate',
+                    'Users.document_id',
+                    'Users.fingerprint',
+                    'Status.status_name',
+                    'AccessType.access_type_name')))
+                ->where($whereCondition)
+                ->andWhere(array('UserAccessControl.device_id' => $deviceId, 'Users.status_id' => '1'))
+                ->contain(array('UserAccessData' => array('AccessType', 'Users' => array('UserType', 'Business', 'Status'))))
+                ->order(array($sortedBy . ' ' . $sortDir));
+
+        }else{
+
+            $userAccessControl = $userAccessControlTable->find('All',
+                array('fields' => array('UserAccessData.user_id',
+                    'UserAccessData.user_access_data_id',
+                    'Users.first_name',
+                    'Users.second_name',
+                    'Users.first_last_name',
+                    'Users.user_photo',
+                    'Users.birthdate',
+                    'Users.document_id',
+                    'Users.fingerprint',
+                    'Status.status_name',
+                    'AccessType.access_type_name')))
+                ->where(array('UserAccessControl.device_id' => $deviceId,'Users.status_id' => '1'))
+                ->contain(array('UserAccessData' => array('AccessType', 'Users' => array('UserType', 'Business', 'Status'))))
+                ->order(array($sortedBy . ' ' . $sortDir));
+        }
+
+        return $userAccessControl;
+    }
+
+
+    public function deleteUserAccessDevice(){
+
+        Log::info("deleting  Route relation with device running");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+
+        if(parent::validReaxiumJsonHeader($jsonObject)){
+
+            try{
+                $device_id = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id'];
+                $user_access_data_id = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['user_access_data_id'])? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['user_access_data_id'];
+
+                if(isset($device_id) && isset($user_access_data_id)){
+                    $userAccessControlTable = TableRegistry::get("UsersAccessControl");
+                    $whereCondition = array('device_id'=>$device_id,'user_access_data_id'=>$user_access_data_id);
+                    $userAccessControlTable->deleteAll($whereCondition);
+                    $response = parent::setSuccessfulDelete($response);
+
+                }
+                else{
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+
+            }
+            catch (\Exception $e){
+                Log::info("Error deleting the user: " . $user_access_data_id . " error:" . $e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+
+        }else{
+            $response = parent::seInvalidParametersMessage($response);
+        }
+
+
+        Log::info("Responde Object: " . json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
 }

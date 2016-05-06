@@ -79,8 +79,15 @@ class RoutesController extends ReaxiumAPIController
 
                 if (isset($jsonObject['ReaxiumParameters']['ReaxiumDevice'])) {
 
-                    if (isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id'])) {
+                    $deviceId = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id'];
+                    $page = $jsonObject['ReaxiumParameters']['ReaxiumDevice']["page"];
+                    $sortedBy = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']["sortedBy"]) ? 'Routes.route_name' : $jsonObject['ReaxiumParameters']['ReaxiumDevice']["sortedBy"];
+                    $sortDir = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']["sortDir"]) ? 'desc' : $jsonObject['ReaxiumParameters']['ReaxiumDevice']["sortDir"];
+                    $filter = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']["filter"]) ? '' : $jsonObject['ReaxiumParameters']['ReaxiumDevice']["filter"];
+                    $limit = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']["limit"]) ? 10 : $jsonObject['ReaxiumParameters']['ReaxiumDevice']["limit"];
 
+
+                    if (isset($deviceId)) {
 
                         $deviceId = $jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id'];
 
@@ -91,26 +98,34 @@ class RoutesController extends ReaxiumAPIController
                             if ($device_status[0]['status_id'] == ReaxiumApiMessages::$CODE_VALIDATE_STATUS) {
 
                                 $this->loadModel('DeviceRoutes');
-                                $arrayOfConditions = array('device_id' => $deviceId);
 
-                                $routesDevice = $this->getRoutesByDevice($arrayOfConditions);
+                                $routesDevice = $this->getRoutesByDevice($deviceId,$filter,$sortedBy,$sortDir);
 
-                                if (isset($routesDevice)) {
+                                $count = $routesDevice->count();
+                                $this->paginate = array('limit' => $limit, 'page' => $page);
+                                $routesFound = $this->paginate($routesDevice);
 
-                                    Log::debug($routesDevice[0]);
-                                    $response['ReaxiumResponse']['object'] = $routesDevice;
+
+                                if ($routesFound->count()>0) {
+
+                                    $maxPages = floor((($count - 1) / $limit) + 1);
+                                    $routeFound = $routesFound->toArray();
+                                    $response['ReaxiumResponse']['totalRecords'] = $count;
+                                    $response['ReaxiumResponse']['totalPages'] = $maxPages;
+                                    $response['ReaxiumResponse']['object'] = $routeFound;
                                     $response = parent::setSuccessfulResponse($response);
+
                                 } else {
-                                    $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                                    $response['ReaxiumResponse']['code'] = "1";
                                     $response['ReaxiumResponse']['message'] = 'Device has no routes';
                                 }
                             } else {
-                                $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                                $response['ReaxiumResponse']['code'] = "2";
                                 $response['ReaxiumResponse']['message'] = 'Device has status invalid';
                             }
 
                         } else {
-                            $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                            $response['ReaxiumResponse']['code'] = "3";
                             $response['ReaxiumResponse']['message'] = 'Device has status invalid';
                         }
 
@@ -137,19 +152,31 @@ class RoutesController extends ReaxiumAPIController
      * @param $arrayConditions
      * @return $this|array|\Cake\ORM\Table|null
      */
-    private function getRoutesByDevice($arrayConditions)
+    private function getRoutesByDevice($idDevice,$filter,$sortedBy,$sortDir)
     {
-        $device = TableRegistry::get('DeviceRoutes');
-        $device = $device->find()->where($arrayConditions)->contain(array('Routes'));
+        $devicesRouteTable = TableRegistry::get('DeviceRoutes');
 
-        if ($device->count() > 0) {
+        if (trim($filter) != "") {
 
-            $device = $device->toArray();
+            $whereCondition = array(array('OR' => array(
+                array('Routes.route_number LIKE' => '%' . $filter . '%'),
+                array('Routes.route_name LIKE' => '%' . $filter . '%'))));
+
+            $deviceRouteFound = $devicesRouteTable->find()
+                ->where($whereCondition)
+                ->andWhere(array('Routes.status_id' => 1,'device_id' => $idDevice))
+                ->contain(array('Routes'))
+                ->order(array($sortedBy . ' ' . $sortDir));
         } else {
-            $device = null;
+            $deviceRouteFound = $devicesRouteTable->find()
+                ->where(array('device_id' => $idDevice))
+                ->andWhere(array('Routes.status_id' => 1))
+                ->contain(array('Routes'))
+                ->order(array($sortedBy . ' ' . $sortDir));
         }
 
-        return $device;
+
+        return $deviceRouteFound;
     }
 
     /**
@@ -899,4 +926,7 @@ class RoutesController extends ReaxiumAPIController
         $this->loadModel('Routes');
         $this->Routes->updateAll(array('status_id' => '3'), array('id_route' => $routeId));
     }
+
+
+
 }
