@@ -1031,6 +1031,7 @@ class DeviceController extends ReaxiumAPIController
                 if (isset($jsonObject['ReaxiumParameters']["ReaxiumDevice"])) {
                     $deviceId = $jsonObject['ReaxiumParameters']["ReaxiumDevice"]['device_id'];
                     $deviceToken = $jsonObject['ReaxiumParameters']["ReaxiumDevice"]['device_token'];
+                    $accessBulkObject = !isset($jsonObject['ReaxiumParameters']["ReaxiumDevice"]['accessBulkObject'])?null:$jsonObject['ReaxiumParameters']["ReaxiumDevice"]['accessBulkObject'];
                     if (isset($deviceId) && isset($deviceToken)) {
                         $reaxiumDevice = $this->getDeviceInfo($deviceId);
                         if (isset($reaxiumDevice)) {
