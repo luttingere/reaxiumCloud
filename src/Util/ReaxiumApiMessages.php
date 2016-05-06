@@ -51,6 +51,8 @@ class ReaxiumApiMessages
     public static $ERROR_CREATING_A_BUSINESS_CODE = 12;
     public static $ERROR_CREATING_A_BUSINESS_MESSAGE = 'Error creating the user, see error log';
 
+    public static $GENERAL_ERROR_CODE = 13;
+
 
     public static $NOT_FOUND_CODE = 404;
     public static $CANNOT_SAVE = 101;
