@@ -16,7 +16,7 @@ class UserAccessController extends ReaxiumAPIController
 {
 
 
-    public function executeAnAccessOfAUser()
+        public function executeAnAccessOfAUser()
     {
         parent::setResultAsAJson();
         $result = parent::getDefaultReaxiumMessage();

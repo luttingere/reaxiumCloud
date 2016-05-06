@@ -1,8 +1,9 @@
 <?php
 namespace App\Util;
 
+use Cake\I18n\Time;
 use Cake\Log\Log;
-define('TIME_ZONE', 'America/America/New_York');
+define('TIME_ZONE', 'America/Caracas');
 /**
  * Created by PhpStorm.
  * User: Eduardo Luttinger
