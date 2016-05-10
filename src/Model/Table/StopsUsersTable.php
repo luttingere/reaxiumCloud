@@ -7,7 +7,7 @@
  */
 
 namespace App\Model\Table;
-
+use Cake\ORM\Table;
 
 class StopsUsersTable extends Table{
 
