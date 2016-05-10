@@ -12,7 +12,7 @@ namespace App\Controller;
 class RFIDController extends ReaxiumAPIController
 {
 
-    public function saveRFIDInformation(){
+        public function saveRFIDInformation(){
         parent::setResultAsAJson();
         $response = parent::getDefaultReaxiumMessage();
         $object = parent::getJsonReceived();
@@ -49,7 +49,7 @@ class RFIDController extends ReaxiumAPIController
 
                     $userAccessData = $userDataAccessTable->newEntity();
                     $userAccessData->user_id = $userId;
-                    $userAccessData->access_type_id = 2;
+                    $userAccessData->access_type_id = 3;
                     $userAccessData->rfid_code = $rfidCardNumber;
                     $userAccessData = $userDataAccessTable->save($userAccessData);
 
