@@ -177,7 +177,7 @@ class StopsController extends ReaxiumAPIController
      *     HTTP/1.1 200 OK
      *     {"ReaxiumResponse": {
      *              "code": "0",
-     *              "message": "SUCCESSFUL REQUEST",
+     *              "message": "SUCCESSFUL REQUEST ",
      *               "object": []
      *                }
      *              }
