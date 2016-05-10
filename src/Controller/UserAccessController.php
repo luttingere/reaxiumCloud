@@ -16,7 +16,7 @@ class UserAccessController extends ReaxiumAPIController
 {
 
 
-        public function executeAnAccessOfAUser()
+    public function executeAnAccessOfAUser()
     {
         parent::setResultAsAJson();
         $result = parent::getDefaultReaxiumMessage();
@@ -24,7 +24,7 @@ class UserAccessController extends ReaxiumAPIController
         try {
             if (parent::validReaxiumJsonHeader($jsonObjectReceived)) {
                 if (isset($jsonObjectReceived['ReaxiumParameters']['UserAccess'])) {
-                    $arrayOfParametersToValidate = array('user_id', 'device_id', 'traffic_type', 'access_type','traffic_info');
+                    $arrayOfParametersToValidate = array('user_id', 'device_id', 'traffic_type', 'access_type', 'traffic_info');
                     $validation = ReaxiumUtil::validateParameters($arrayOfParametersToValidate, $jsonObjectReceived['ReaxiumParameters']['UserAccess']);
                     if ($validation['code'] == '0') {
                         $userId = $jsonObjectReceived['ReaxiumParameters']['UserAccess']['user_id'];
@@ -33,16 +33,16 @@ class UserAccessController extends ReaxiumAPIController
                         $accessType = $jsonObjectReceived['ReaxiumParameters']['UserAccess']['access_type'];
                         $trafficInfo = $jsonObjectReceived['ReaxiumParameters']['UserAccess']['traffic_info'];
                         $accessController = new AccessController();
-                        $accessObject = $accessController->registerAUserAccess($userId,$deviceId,$accessType,$trafficType,$trafficInfo);
-                         if(isset($accessObject)){
+                        $accessObject = $accessController->registerAUserAccess($userId, $deviceId, $accessType, $trafficType, $trafficInfo);
+                        if (isset($accessObject)) {
 
-                                $result = parent::setSuccessfulResponse($result);
-                                $result['ReaxiumResponse']['object'] = $accessObject;
+                            $result = parent::setSuccessfulResponse($result);
+                            $result['ReaxiumResponse']['object'] = array($accessObject);
 
-                         }else{
-                             $result['ReaxiumResponse']['code'] = 15;
-                             $result['ReaxiumResponse']['message'] = 'Error generating the user access in our server';
-                         }
+                        } else {
+                            $result['ReaxiumResponse']['code'] = 15;
+                            $result['ReaxiumResponse']['message'] = 'Error generating the user access in our server';
+                        }
                     } else {
                         $result['ReaxiumResponse']['code'] = 14;
                         $result['ReaxiumResponse']['message'] = $validation['message'];

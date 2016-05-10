@@ -1031,7 +1031,7 @@ class DeviceController extends ReaxiumAPIController
                 if (isset($jsonObject['ReaxiumParameters']["ReaxiumDevice"])) {
                     $deviceId = $jsonObject['ReaxiumParameters']["ReaxiumDevice"]['device_id'];
                     $deviceToken = $jsonObject['ReaxiumParameters']["ReaxiumDevice"]['device_token'];
-                    $accessBulkObject = !isset($jsonObject['ReaxiumParameters']["ReaxiumDevice"]['accessBulkObject'])?null:$jsonObject['ReaxiumParameters']["ReaxiumDevice"]['accessBulkObject'];
+                    $accessBulkObject = !isset($jsonObject['ReaxiumParameters']["ReaxiumDevice"]["accessBulkObject"])?null:$jsonObject['ReaxiumParameters']["ReaxiumDevice"]['accessBulkObject'];
                     if (isset($deviceId) && isset($deviceToken)) {
                         $reaxiumDevice = $this->getDeviceInfo($deviceId);
                         if (isset($reaxiumDevice)) {
@@ -1044,6 +1044,15 @@ class DeviceController extends ReaxiumAPIController
                                     $this->updateDevice($fields, $conditions);
 
                                     $deviceAccessData = $this->getDeviceAccessData($deviceId);
+
+                                    if(isset($accessBulkObject)){
+                                        try{
+                                            Log::info("Saving the device access control records");
+                                            $this->saveBulkOfDeviceAccess($accessBulkObject);
+                                        }catch(\Exception $e){
+                                            Log::info("Error: ". $e->getMessage());
+                                        }
+                                    }
 
                                     $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$SUCCESS_CODE;
                                     $response['ReaxiumResponse']['message'] = 'Device synchronized successfully';
@@ -1074,8 +1083,49 @@ class DeviceController extends ReaxiumAPIController
         } else {
             $response = parent::setInvalidJsonMessage($response);
         }
-        Log::info("Responde Object: " . json_encode($response));
+        Log::info("Response Object: " . json_encode($response));
         $this->response->body(json_encode($response));
+    }
+
+
+    private function saveBulkOfDeviceAccess($bulkOfAccessObject){
+        $accessController = new AccessController();
+        foreach($bulkOfAccessObject as $accessObject){
+            try {
+                $userId = $accessObject['userId'];
+                $deviceId = $accessObject['deviceId'];
+                $trafficType = $accessObject['accessType'];
+                $trafficTypeId = null;
+                switch($trafficType){
+                    case 'IN':
+                        $trafficTypeId = 1;
+                        break;
+                    case 'OUT':
+                        $trafficTypeId = 2;
+                        break;
+                }
+                $accessType = $accessObject['userAccessType'];
+                $accessTypeId = null;
+                switch($accessType){
+                    case 'BIOMETRIC':
+                        $accessTypeId = 2;
+                        break;
+                    case 'RFID':
+                        $accessTypeId = 3;
+                        break;
+                }
+
+                $trafficInfo = "";
+                $accessController->registerAUserAccess($userId,
+                    $deviceId,
+                    $accessTypeId,
+                    $trafficTypeId,
+                    $trafficInfo);
+
+            }catch(\Exception $e){
+                Log::info("Error saving an access in the server, ".$e->getMessage());
+            }
+        }
     }
 
     /**
@@ -1111,7 +1161,6 @@ class DeviceController extends ReaxiumAPIController
         } else {
             $userAccessControl = null;
         }
-        Log::info(json_encode($userAccessControl));
         return $userAccessControl;
     }
 
@@ -1304,7 +1353,7 @@ class DeviceController extends ReaxiumAPIController
     //TODO falta documentacion ojo quede aqui!
     public function getUsersByDevice(){
 
-        Log::info("synchronize a device service");
+        Log::info("getUsersByDevice service");
         parent::setResultAsAJson();
         $response = parent::getDefaultReaxiumMessage();
         $jsonObject = parent::getJsonReceived();
