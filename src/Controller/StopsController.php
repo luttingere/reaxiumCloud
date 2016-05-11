@@ -553,4 +553,163 @@ class StopsController extends ReaxiumAPIController
         $this->response->body(json_encode($response));
     }
 
+
+    public function getUserByStops(){
+
+        Log::info("Get All User by Stop Service invoked");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+
+
+        if(parent::validReaxiumJsonHeader($jsonObject)){
+
+            try{
+
+                if(isset($jsonObject['ReaxiumParameters']['ReaxiumStops'])){
+
+                    $stop_id = !isset($jsonObject['ReaxiumParameters']['ReaxiumStops']['id_stop']) ? null :$jsonObject['ReaxiumParameters']['ReaxiumStops']['id_stop'];
+                    $page = $jsonObject['ReaxiumParameters']['ReaxiumStops']["page"];
+                    $sortedBy = !isset($jsonObject['ReaxiumParameters']['ReaxiumStops']["sortedBy"]) ? 'Users.first_name' : $jsonObject['ReaxiumParameters']['ReaxiumStops']["sortedBy"];
+                    $sortDir = !isset($jsonObject['ReaxiumParameters']['ReaxiumStops']["sortDir"]) ? 'desc' : $jsonObject['ReaxiumParameters']['ReaxiumStops']["sortDir"];
+                    $filter = !isset($jsonObject['ReaxiumParameters']['ReaxiumStops']["filter"]) ? '' : $jsonObject['ReaxiumParameters']['ReaxiumStops']["filter"];
+                    $limit = !isset($jsonObject['ReaxiumParameters']['ReaxiumStops']["limit"]) ? 10 : $jsonObject['ReaxiumParameters']['ReaxiumStops']["limit"];
+
+                    if(isset($stop_id)){
+
+                        $stops_status = $this->getStatusStop(array('id_stop'=>$stop_id));
+
+                        if(isset($stops_status)){
+                            if($stops_status[0]['status_id'] == ReaxiumApiMessages::$CODE_VALIDATE_STATUS){
+                                //$this->loadModel('StopsUsers');
+
+                                $stopsUserFound = $this->getUserByStop($stop_id,$filter,$sortedBy,$sortDir);
+
+                                $count = $stopsUserFound->count();
+                                $this->paginate = array('limit' => $limit, 'page' => $page);
+                                $stopsUserFound = $this->paginate($stopsUserFound);
+
+
+                                if ($stopsUserFound->count()>0) {
+
+                                    $maxPages = floor((($count - 1) / $limit) + 1);
+                                    $stopsUserFound = $stopsUserFound->toArray();
+                                    $response['ReaxiumResponse']['totalRecords'] = $count;
+                                    $response['ReaxiumResponse']['totalPages'] = $maxPages;
+                                    $response['ReaxiumResponse']['object'] = $stopsUserFound;
+                                    $response = parent::setSuccessfulResponse($response);
+
+                                } else {
+                                    $response['ReaxiumResponse']['code'] = "1";
+                                    $response['ReaxiumResponse']['message'] = 'The stop has no members';
+                                }
+                            }else{
+                                $response['ReaxiumResponse']['code'] = "2";
+                                $response['ReaxiumResponse']['message'] = 'Stop has status invalid';
+                            }
+                        }
+
+                    }else{
+                        $response['ReaxiumResponse']['code'] = "2";
+                        $response['ReaxiumResponse']['message'] = 'Stop has status invalid';
+                    }
+
+                }else{
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+            }
+            catch(\Exception $e){
+                Log::info('Error get stop by id: ' .$e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+
+        }else{
+            $response = parent::seInvalidParametersMessage($response);
+        }
+        Log::info("Responde Object: " . json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
+
+    private function getStatusStop($arrayConditions){
+
+        $status_stop = TableRegistry::get('Stops');
+        $status_stop = $status_stop->find()->where($arrayConditions);
+
+        if ($status_stop->count() > 0) {
+            $status_stop = $status_stop->toArray();
+        } else {
+            $status_stop = null;
+        }
+        return $status_stop;
+
+    }
+
+
+    private function getUserByStop($idDevice,$filter,$sortedBy,$sortDir){
+
+        $stopsUsersTable = TableRegistry::get('StopsUsers');
+
+        if(trim($filter) !=""){
+
+            $whereCondition = array(array('OR' => array(
+                array('Users.first_name LIKE' => '%' . $filter . '%'),
+                array('Users.first_last_name LIKE' => '%' . $filter . '%'),
+                array('Users.document_id LIKE' => '%' . $filter . '%'))));
+
+            $stopUserFound = $stopsUsersTable->find()
+                ->where($whereCondition)
+                ->andWhere(array('Users.status_id' => 1,'id_stop' => $idDevice))
+                ->contain(array('Users'))
+                ->order(array($sortedBy . ' ' . $sortDir));
+
+        }else{
+            $stopUserFound = $stopsUsersTable->find()
+                ->where(array('id_stop' => $idDevice))
+                ->andWhere(array('Users.status_id' => 1))
+                ->contain(array('Users'))
+                ->order(array($sortedBy . ' ' . $sortDir));
+        }
+
+        return $stopUserFound;
+    }
+
+
+    public function deleteUserRelationShipStop(){
+
+        Log::info("Stop by id service invoke");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+
+
+        if(parent::validReaxiumJsonHeader($jsonObject)){
+
+            try{
+
+                $id_stops_user = !isset($jsonObject['ReaxiumParameters']['ReaxiumStops']['id_stops_user']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumStops']['id_stops_user'];
+
+                if(isset($id_stops_user)){
+                    $userByStopsTable = TableRegistry::get("StopsUsers");
+                    $userByStopsTable->deleteAll(array('id_stops_user'=>$id_stops_user));
+                    $response = parent::setSuccessfulDelete($response);
+
+                }else{
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+
+            }
+            catch(\Exception $e){
+                Log::info('Error get stop by id: ' .$e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+
+        }else{
+            $response = parent::seInvalidParametersMessage($response);
+        }
+
+        Log::info(json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
 }

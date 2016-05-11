@@ -16,6 +16,8 @@ class StopsUsersTable extends Table{
         parent::initialize($config);
         $this->table('stops_users');
         $this->primaryKey('id_stops_user');
+        $this->belongsTo('Users',array('foreignKey'=>'user_id'));
+
     }
 
 }
