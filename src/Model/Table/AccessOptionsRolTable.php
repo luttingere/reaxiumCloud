@@ -15,7 +15,7 @@ class AccessOptionsRolTable extends Table{
         parent::initialize($config);
         $this->table('access_options_rol');
         $this->belongsTo('MenuApplication',array('foreignKey'=>'menu_id'));
-        $this->belongsToMany('SubMenuApplication',array('foreignKey'=>'menu_id'));
+
 
     }
 }
