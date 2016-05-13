@@ -97,7 +97,6 @@ class RoutesController extends ReaxiumAPIController
 
                             if ($device_status[0]['status_id'] == ReaxiumApiMessages::$CODE_VALIDATE_STATUS) {
 
-                                $this->loadModel('DeviceRoutes');
 
                                 $routesDevice = $this->getRoutesByDevice($deviceId,$filter,$sortedBy,$sortDir);
 

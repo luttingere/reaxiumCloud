@@ -478,7 +478,7 @@ class UsersController extends ReaxiumAPIController
     private function getUserInfo($arrayConditions)
     {
         $usersTable = TableRegistry::get("Users");
-        $user = $usersTable->find()->where($arrayConditions)->contain(array("Status", "PhoneNumbers", "UserType", "Address"));
+        $user = $usersTable->find()->where($arrayConditions)->contain(array("Status", "PhoneNumbers", "UserType", "Address","Business"));
         if ($user->count() > 0) {
             $user = $user->toArray();
         } else {
