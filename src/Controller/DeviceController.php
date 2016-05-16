@@ -1215,7 +1215,7 @@ class DeviceController extends ReaxiumAPIController
                     $response = parent::setSuccessfulResponse($response);
                 } else {
                     $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
-                    $response['ReaxiumResponse']['message'] = 'No Routes found';
+                    $response['ReaxiumResponse']['message'] = 'No Device found';
                 }
 
 
