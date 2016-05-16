@@ -9,6 +9,7 @@
 namespace App\Controller;
 
 use App\Util\ReaxiumApiMessages;
+use App\Util\ReaxiumUtil;
 use Cake\Core\Exception\Exception;
 use Cake\Database\Schema\Table;
 use Cake\Log\Log;
@@ -502,14 +503,14 @@ class AccessController extends ReaxiumAPIController
     }
 
 
-
-    public function registerAUserAccess($userId,$deviceId,$accessTypeId,$trafficType,$trafficInfo){
+    public function registerAUserAccess($userId, $deviceId, $accessTypeId, $trafficType, $trafficInfo)
+    {
         $result = null;
-        $accessId = $this->getAccessIdOfAnAccess($userId,$deviceId,$accessTypeId);
-        if(isset($accessId)) {
+        $accessId = $this->getAccessIdOfAnAccess($userId, $deviceId, $accessTypeId);
+        if (isset($accessId)) {
             $trafficController = new TrafficController();
-            $trafficSaved = $trafficController->registerATraffic($userId,$trafficType,$accessId,$deviceId,$trafficInfo);
-            if($trafficSaved){
+            $trafficSaved = $trafficController->registerATraffic($userId, $trafficType, $accessId, $deviceId, $trafficInfo);
+            if ($trafficSaved) {
                 $result = $trafficSaved;
             }
         }
@@ -527,7 +528,7 @@ class AccessController extends ReaxiumAPIController
             $userAccessDataId = $userDataAccessObject[0]['user_access_data_id'];
             $userAccessControlTable = TableRegistry::get("UserAccessControl");
             $userAccessControlObject = $userAccessControlTable->find()->where(array('user_access_data_id' => $userAccessDataId, 'device_id' => $deviceId));
-            if($userAccessControlObject->count() > 0){
+            if ($userAccessControlObject->count() > 0) {
                 $userAccessControlObject = $userAccessControlObject->toArray();
                 $accessId = $userAccessControlObject[0]['access_id'];
                 $result = $accessId;
@@ -735,6 +736,131 @@ class AccessController extends ReaxiumAPIController
         $this->response->body(json_encode($response));
     }
 
+
+    public function checkParentsAccess()
+    {
+        Log::info("checkParentsAccess service invoked");
+        parent::setResultAsAJson();
+        $response = parent:: getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+        $failure = false;
+        $result = array();
+
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
+            try {
+
+                if (isset($jsonObject['ReaxiumParameters']["UserAccessData"])) {
+
+                    $arrayOfValuesToValidate = array('user_login_name', 'user_password', 'device_token', 'device_platform');
+                    $validation = ReaxiumUtil::validateParameters($arrayOfValuesToValidate, $jsonObject['ReaxiumParameters']["UserAccessData"]);
+                    if ($validation['code'] == 0) {
+
+                        $userName = $jsonObject['ReaxiumParameters']['UserAccessData']['user_login_name'];
+                        $userPassword = $jsonObject['ReaxiumParameters']['UserAccessData']['user_password'];
+                        $deviceToken = $jsonObject['ReaxiumParameters']['UserAccessData']['device_token'];
+                        $devicePlatform = $jsonObject['ReaxiumParameters']['UserAccessData']['device_platform'];
+
+                        $result = $this->parentsAccessProcess($userName, $userPassword, $devicePlatform, $deviceToken);
+
+                        if ($result['loginValidation']) {
+
+                            $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$SUCCESS_CODE;
+                            $response['ReaxiumResponse']['message'] = ReaxiumApiMessages::$SUCCESS_MESSAGE;
+                            $response['ReaxiumResponse']['object'] = $result['parentInfo'];
+
+                        } else {
+
+                            $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_USER_ACCESS_CODE;
+                            $response['ReaxiumResponse']['message'] = ReaxiumApiMessages::$INVALID_USER_ACCESS_MESSAGE;
+
+                        }
+
+                    } else {
+                        $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_PARAMETERS_CODE;
+                        $response['ReaxiumResponse']['message'] = $validation['message'];
+                    }
+                } else {
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+            } catch (\Exception $e) {
+                Log::info("Error: " . $e->getMessage());
+                $response = $this->setInternalServiceError($response);
+            }
+        } else {
+            Log::info("Error - Json Invalido");
+            $response = parent::setInvalidJsonMessage($response);
+        }
+        Log::info("Responde Object: " . json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
+    private function parentsAccessProcess($userName, $password, $devicePlatform, $deviceToken)
+    {
+        $response = array('loginValidation' => false, 'parentInfo' => array('parent' => array(), 'parentRelationship' => array()));
+
+        try {
+            $accessTable = TableRegistry::get("UserAccessData");
+            $accessId = $accessTable->find('all', array('fields' => array('user_id'),
+                'conditions' => array(
+                    'access_type_id' => '1',
+                    'user_login_name' => $userName,
+                    'user_password' => $password,
+                    'status_id' => '1')
+            ));
+            if ($accessId->count() > 0) {
+                $response['loginValidation'] = true;
+                $accessId = $accessId->toArray();
+                $stakeholderTable = TableRegistry::get("Stakeholders");
+
+                //save the device id of the parent, for send him push notifications in the future
+                switch ($devicePlatform) {
+                    case 'ANDROID':
+                        $stakeholderTable->updateAll(array('android_id' => $deviceToken), array('user_id' => $accessId[0]['user_id']));
+                        break;
+                    case 'IOS':
+                        $stakeholderTable->updateAll(array('ios_id' => $deviceToken), array('user_id' => $accessId[0]['user_id']));
+                        break;
+                    default:
+                        Log::info("The device platform recieved is not valid: " . $devicePlatform);
+                        break;
+                }
+
+                //find the stakeholder user relationship
+                $stakeHolder = $stakeholderTable->findByUserId($accessId[0]['user_id'])->contain(array('Users' => array('UserType')));
+                if ($stakeHolder->count() > 0) {
+                    $stakeHolder = $stakeHolder->toArray();
+                    $response['parentInfo']['parent'] = $stakeHolder[0]['user'];
+                    $userRelationShipTable = TableRegistry::get("UsersRelationship");
+                    $userRelationship = $userRelationShipTable->find('all', array(
+                        'fields' => array('Users.document_id',
+                            'Users.first_name',
+                            'Users.second_name',
+                            'Users.first_last_name',
+                            'Users.user_photo',
+                            'Users.email',
+                            'Users.birthdate',
+                            'Business.business_name'),
+                        'conditions' => array('stakeholder_id' => $stakeHolder[0]['stakeholder_id'], 'Users.status_id' => '1'),
+                        'contain' => array('Users' => array('Business'))
+                    ));
+                    Log::info($userRelationship);
+                    if ($userRelationship->count() > 0) {
+                        $userRelationship = $userRelationship->toArray();
+                        foreach($userRelationship as $userRel){
+                            array_push($response['parentInfo']['parentRelationship'],$userRel['Users']);
+                        }
+                    }
+                }
+            } else {
+                Log::info("Invalid user login for parent username: " . $userName . ", with parentPassword: " . $password);
+            }
+        } catch (\Exception $e) {
+            Log::info("Error, with the parents login, " . $e->getMessage());
+        }
+        return $response;
+    }
+
+
     /**
      * @param $arrayOfConditions
      * @return $this|array|\Cake\ORM\Table|null
@@ -742,7 +868,7 @@ class AccessController extends ReaxiumAPIController
     private function getUserDataAccessInfo($arrayOfConditions)
     {
         $access = TableRegistry::get("UserAccessData");
-        $access = $access->find()->where($arrayOfConditions)->contain(array('Users' => array('UserType', 'Status','Stakeholders'=>array('Users'))));
+        $access = $access->find()->where($arrayOfConditions)->contain(array('Users' => array('UserType', 'Status', 'Stakeholders' => array('Users'))));
         if ($access->count() > 0) {
             $access = $access->toArray();
         } else {
