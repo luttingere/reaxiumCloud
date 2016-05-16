@@ -238,16 +238,16 @@ class SystemListController extends ReaxiumAPIController
 
             try{
 
-                $user_type_id = !isset($jsonObject['ReaxiumParameters']['ReaxiumSystem']['type_user_id']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumSystem']['type_user_id'];
-                $menu_id = !isset($jsonObject['ReaxiumParameters']['ReaxiumSystem']['menu_id']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumSystem']['menu_id'];
-                $activeMenu=!isset($jsonObject['ReaxiumParameters']['ReaxiumSystem']['active_menu']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumSystem']['active_menu'];
+                $objAccess = !isset($jsonObject['ReaxiumParameters']['ReaxiumSystem']['object'])? null : $jsonObject['ReaxiumParameters']['ReaxiumSystem']['object'];
 
-                if(isset($user_type_id) && isset($menu_id) && isset($activeMenu)){
+                if(isset($objAccess)){
 
                     $accessOptionsTable = TableRegistry::get("AccessOptionsRol");
-                    $accessOptionsFound = $accessOptionsTable->updateAll(array('active_menu'=>$activeMenu),array('user_type_id'=>$user_type_id,'menu_id'=>$menu_id));
 
-                    Log::info("Menu activado para usuario con type id: " + $user_type_id);
+                    foreach($objAccess as $access){
+                        $accessOptionsFound = $accessOptionsTable->updateAll(array('active_menu'=>$access['active_menu']),array('user_type_id'=>$access['type_user_id'],'menu_id'=>$access['menu_id']));
+                    }
+
                     Log::info(json_encode($accessOptionsFound));
 
                     $response = parent::setSuccessfulResponse($response);
@@ -277,6 +277,7 @@ class SystemListController extends ReaxiumAPIController
         parent::setResultAsAJson();
         $response = parent::getDefaultReaxiumMessage();
 
+        $response = parent::setSuccessfulResponse($response);
         $response['ReaxiumResponse']['object'] = $this->getDataAccessOptionsMenu();
         $this->response->body(json_encode($response));
 
