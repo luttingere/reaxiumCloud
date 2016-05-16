@@ -742,7 +742,7 @@ class AccessController extends ReaxiumAPIController
     private function getUserDataAccessInfo($arrayOfConditions)
     {
         $access = TableRegistry::get("UserAccessData");
-        $access = $access->find()->where($arrayOfConditions)->contain(array('Users' => array('UserType', 'Status')));
+        $access = $access->find()->where($arrayOfConditions)->contain(array('Users' => array('UserType', 'Status','Stakeholders'=>array('Users'))));
         if ($access->count() > 0) {
             $access = $access->toArray();
         } else {
