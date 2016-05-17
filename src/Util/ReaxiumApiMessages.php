@@ -59,4 +59,9 @@ class ReaxiumApiMessages
 
     public static $CODE_VALIDATE_STATUS = 1;
 
+    public static $USER_TYPE_SUPER_ADMIN = 1;
+    public static $USER_TYPE_ADMIN_SCHOOL = 5;
+    public static $USER_TYPE_ADMIN_CALL_CENTER = 6;
+    public static $ACTIVE_MENU_FOR_TYPE_USER = 1;
+
 }

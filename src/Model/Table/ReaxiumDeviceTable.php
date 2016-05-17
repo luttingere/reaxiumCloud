@@ -26,6 +26,11 @@ class ReaxiumDeviceTable extends Table{
                 'foreignKey' => 'device_id',
                 'joinTable' => 'applications_relationship'));
         $this->belongsTo('Status', array('foreignKey' => 'status_id'));
+
+        $this->belongsToMany('Business',
+            array('targetForeignKey' => 'business_id',
+                'foreignKey' => 'device_id',
+                'joinTable' => 'device_business'));
     }
 
 
