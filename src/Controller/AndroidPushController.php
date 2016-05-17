@@ -16,13 +16,13 @@ use Cake\Log\Log;
  * Google Api Key for app Mellevas (Server Mode)
  * @var string
  */
-define("SERVER_KEY_API_ACCESS_KEY", "AIzaSyD2_yXXGpCpkyUNmJ5j-jGa7oYva1y2NiY");
+define("SERVER_KEY_API_ACCESS_KEY", "AIzaSyDP5BeGvYdsLyZyL8VNiGz1RgccNB5de0A");
 
 /**
  * Google Api Key for app Mellevas (Navigator Mode)
  * @var string
  */
-define("NAVIGATOR_KEY_API_ACCESS_KEY ", "AIzaSyCArAdRcRXWocwXYJAHYqVASSEE3TLzHso");
+define("NAVIGATOR_KEY_API_ACCESS_KEY ", "AIzaSyBR-ll-6g8g0Aju1wBPErRBmddFwl_dfvU");
 
 /**
  * Author Eduardo Luttinger
@@ -95,20 +95,22 @@ class AndroidPushController extends AppController {
      * @param $arrayOfAndroidMessages
      */
     public static function sendBulkPush($arrayOfAndroidMessages){
-        $httpCall = curl_init();
-        curl_setopt( $httpCall,CURLOPT_URL, AndroidPushController::$googleCloudMessaginServerUrl);
-        curl_setopt( $httpCall,CURLOPT_POST, true );
-        curl_setopt( $httpCall,CURLOPT_HTTPHEADER, AndroidPushController::$httpAndroidPushHeader);
-        curl_setopt( $httpCall,CURLOPT_RETURNTRANSFER, true );
-        curl_setopt( $httpCall,CURLOPT_SSL_VERIFYPEER, false );
-        foreach($arrayOfAndroidMessages as $messages){
-            $dataToSend = AndroidPushController::getPushData($messages['deviceId'],AndroidPushController::loadSimpleMessage($messages['message']));
-            Log::info($dataToSend);
-            curl_setopt( $httpCall,CURLOPT_POSTFIELDS, $dataToSend);
-            $result = curl_exec($httpCall);
-            Log::info($result);
+        if(sizeof($arrayOfAndroidMessages) > 0){
+            $httpCall = curl_init();
+            curl_setopt( $httpCall,CURLOPT_URL, AndroidPushController::$googleCloudMessaginServerUrl);
+            curl_setopt( $httpCall,CURLOPT_POST, true );
+            curl_setopt( $httpCall,CURLOPT_HTTPHEADER, AndroidPushController::$httpAndroidPushHeader);
+            curl_setopt( $httpCall,CURLOPT_RETURNTRANSFER, true );
+            curl_setopt( $httpCall,CURLOPT_SSL_VERIFYPEER, false );
+            foreach($arrayOfAndroidMessages as $messages){
+                $dataToSend = AndroidPushController::getPushData($messages['deviceId'],AndroidPushController::loadSimpleMessage($messages['message']));
+                Log::info($dataToSend);
+                curl_setopt( $httpCall,CURLOPT_POSTFIELDS, $dataToSend);
+                $result = curl_exec($httpCall);
+                Log::info($result);
+            }
+            curl_close( $httpCall );
         }
-        curl_close( $httpCall );
     }
 
     /**

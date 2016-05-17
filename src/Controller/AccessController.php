@@ -513,6 +513,8 @@ class AccessController extends ReaxiumAPIController
             if ($trafficSaved) {
                 $result = $trafficSaved;
             }
+        }else{
+            Log::info("The user id: ".$userId." dont have a valid access, access type id received: ".$accessTypeId);
         }
         return $result;
     }
@@ -743,8 +745,6 @@ class AccessController extends ReaxiumAPIController
         parent::setResultAsAJson();
         $response = parent:: getDefaultReaxiumMessage();
         $jsonObject = parent::getJsonReceived();
-        $failure = false;
-        $result = array();
 
         if (parent::validReaxiumJsonHeader($jsonObject)) {
             try {
@@ -764,9 +764,8 @@ class AccessController extends ReaxiumAPIController
 
                         if ($result['loginValidation']) {
 
-                            $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$SUCCESS_CODE;
-                            $response['ReaxiumResponse']['message'] = ReaxiumApiMessages::$SUCCESS_MESSAGE;
-                            $response['ReaxiumResponse']['object'] = $result['parentInfo'];
+                            $response = parent::setSuccessfulResponse($response);
+                            $response['ReaxiumResponse']['object'] = array($result['parentInfo']);
 
                         } else {
 
@@ -833,6 +832,7 @@ class AccessController extends ReaxiumAPIController
                     $userRelationShipTable = TableRegistry::get("UsersRelationship");
                     $userRelationship = $userRelationShipTable->find('all', array(
                         'fields' => array('Users.document_id',
+                            'Users.user_id',
                             'Users.first_name',
                             'Users.second_name',
                             'Users.first_last_name',

@@ -319,68 +319,67 @@ class TrafficController extends ReaxiumAPIController
      * @param $sortDir
      * @return $this|array|null
      */
-    private function getTrafficFilteredByUser($userId, $filter,$sortedBy,$sortDir)
+    private function getTrafficFilteredByUser($userId, $filter, $sortedBy, $sortDir)
     {
         $trafficTable = TableRegistry::get("Traffic");
         $trafficFound = $trafficTable->find('all',
             array('fields' => array('Traffic.datetime', 'TrafficType.traffic_type_name', 'ReaxiumDevice.device_id', 'ReaxiumDevice.device_name'),
                 'conditions' => array('Traffic.user_id' => $userId,
                     array('OR' => array(array('datetime LIKE' => '%' . $filter . '%'),
-                    array('TrafficType.traffic_type_name LIKE' => '%' . $filter . '%'))))))->contain(array('TrafficType', 'ReaxiumDevice'))->order(array($sortedBy . ' ' . $sortDir));
+                        array('TrafficType.traffic_type_name LIKE' => '%' . $filter . '%'))))))->contain(array('TrafficType', 'ReaxiumDevice'))->order(array($sortedBy . ' ' . $sortDir));
 
         return $trafficFound;
     }
 
-    public function trafficFilteredByUser(){
+    public function trafficFilteredByUser()
+    {
         parent::setResultAsAJson();
         $result = parent::getDefaultReaxiumMessage();
         $jsonObjectReceived = parent::getJsonReceived();
-        try{
-            if(parent::validReaxiumJsonHeader($jsonObjectReceived)){
-                    $argumentsToValidate = array('filter', 'sortedBy', 'sortDir', 'user_id', 'limit', 'page');
-                    $validationResult = ReaxiumUtil::validateParameters($argumentsToValidate, $jsonObjectReceived['ReaxiumParameters']);
-                    if ($validationResult['code'] == '0') {
+        try {
+            if (parent::validReaxiumJsonHeader($jsonObjectReceived)) {
+                $argumentsToValidate = array('filter', 'sortedBy', 'sortDir', 'user_id', 'limit', 'page');
+                $validationResult = ReaxiumUtil::validateParameters($argumentsToValidate, $jsonObjectReceived['ReaxiumParameters']);
+                if ($validationResult['code'] == '0') {
 
-                        $filter = $jsonObjectReceived['ReaxiumParameters']['filter'];
-                        $sortedBy = $jsonObjectReceived['ReaxiumParameters']['sortedBy'];
-                        $sortDir = $jsonObjectReceived['ReaxiumParameters']['sortDir'];
-                        $userId = $jsonObjectReceived['ReaxiumParameters']['user_id'];
-                        $limit = $jsonObjectReceived['ReaxiumParameters']['limit'];
-                        $page = $jsonObjectReceived['ReaxiumParameters']['page'];
+                    $filter = $jsonObjectReceived['ReaxiumParameters']['filter'];
+                    $sortedBy = $jsonObjectReceived['ReaxiumParameters']['sortedBy'];
+                    $sortDir = $jsonObjectReceived['ReaxiumParameters']['sortDir'];
+                    $userId = $jsonObjectReceived['ReaxiumParameters']['user_id'];
+                    $limit = $jsonObjectReceived['ReaxiumParameters']['limit'];
+                    $page = $jsonObjectReceived['ReaxiumParameters']['page'];
 
-                        $trafficFiltered = $this->getTrafficFilteredByUser($userId, $filter, $sortedBy, $sortDir);
-                        $count = $trafficFiltered->count();
-                        if ($count > 0) {
+                    $trafficFiltered = $this->getTrafficFilteredByUser($userId, $filter, $sortedBy, $sortDir);
+                    $count = $trafficFiltered->count();
+                    if ($count > 0) {
 
-                            $this->paginate = array('limit' => $limit, 'page' => $page);
-                            $trafficFiltered = $this->paginate($trafficFiltered);
+                        $this->paginate = array('limit' => $limit, 'page' => $page);
+                        $trafficFiltered = $this->paginate($trafficFiltered);
 
-                            $maxPages = floor((($count - 1) / $limit) + 1);
-                            $result['ReaxiumResponse']['totalRecords'] = $count;
-                            $result['ReaxiumResponse']['totalPages'] = $maxPages;
+                        $maxPages = floor((($count - 1) / $limit) + 1);
+                        $result['ReaxiumResponse']['totalRecords'] = $count;
+                        $result['ReaxiumResponse']['totalPages'] = $maxPages;
 
-                            $result = parent::setSuccessfulResponse($result);
-                            $result['ReaxiumResponse']['object'] = $trafficFiltered;
-                        } else {
-                            $result['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
-                            $result['ReaxiumResponse']['message'] = 'No data found';
-                        }
+                        $result = parent::setSuccessfulResponse($result);
+                        $result['ReaxiumResponse']['object'] = $trafficFiltered;
                     } else {
-                        $result['ReaxiumResponse']['code'] = ReaxiumApiMessages::$GENERAL_ERROR_CODE;
-                        $result['ReaxiumResponse']['message'] = $validationResult['message'];
+                        $result['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                        $result['ReaxiumResponse']['message'] = 'No data found';
                     }
-            }else{
+                } else {
+                    $result['ReaxiumResponse']['code'] = ReaxiumApiMessages::$GENERAL_ERROR_CODE;
+                    $result['ReaxiumResponse']['message'] = $validationResult['message'];
+                }
+            } else {
                 $result = parent::setInvalidJsonHeader($result);
             }
-        }catch(\Exception $e){
+        } catch (\Exception $e) {
             $result = parent::setInternalServiceError($result);
-            Log::info("Error search the traffic by user, ".$e->getMessage());
+            Log::info("Error search the traffic by user, " . $e->getMessage());
         }
         Log::info("Response Object: " . json_encode($result));
         $this->response->body(json_encode($result));
     }
-
-
 
 
     /**
@@ -407,6 +406,23 @@ class TrafficController extends ReaxiumAPIController
         $trafficRecord->traffic_info = $trafficInfo;
         $result = $trafficTable->save($trafficRecord);
         return $result;
+    }
+
+    public static function getTrafficTypeName($trafficTypeId)
+    {
+        $trafficTypeName = "IN";
+        switch ($trafficTypeId) {
+            case 1:
+                $trafficTypeName = 'IN';
+                break;
+            case 2:
+                $trafficTypeName = 'OUT';
+                break;
+            case 3:
+                $trafficTypeName = 'SERVER';
+                break;
+        }
+        return $trafficTypeName;
     }
 
 
