@@ -567,16 +567,17 @@ class RoutesController extends ReaxiumAPIController
             $route_number = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_number"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_number"];
             $route_address = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_address"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_address"];
             $stop_object = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["stops"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["stops"];
+            $id_route = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["id_route"]) ? null: $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["id_route"];
+
 
             if (isset($route_name) && isset($route_number) && isset($route_address) && isset($stop_object)) {
 
                 try {
                     $routeDataTable = TableRegistry::get("Routes");
-                    $exitIdRoute = $this->existRoute($route_number,$route_name,$routeDataTable);
                     $arrayRoutesRelationStops = [];
                     $validate = true;
 
-                    if($exitIdRoute == 0){
+                    if($id_route == null){
 
                         Log::info("Modo crear rutas");
 
@@ -626,15 +627,17 @@ class RoutesController extends ReaxiumAPIController
                             Log::info("Ruta no pudo se creada");
                             $response = parent::setInternalServiceError($response);
                         }
-                    }else{
+                    }
+                    else{
                         //si existe se borran las paradas asociadas
 
-                        Log::info("Mode editar rutas id:"+$exitIdRoute);
+                        Log::info("Mode editar rutas");
+
                         $routeByStopsTable = TableRegistry::get("RoutesStopsRelationship");
-                        $routeByStopsTable->deleteAll(["id_route"=>$exitIdRoute]);
+                        $routeByStopsTable->deleteAll(["id_route"=>$id_route]);
 
                             foreach($stop_object as $obj){
-                                array_push($arrayRoutesRelationStops,["id_route"=>$exitIdRoute,"id_stop"=>$obj["id_stop"]]);
+                                array_push($arrayRoutesRelationStops,["id_route"=>$id_route,"id_stop"=>$obj["id_stop"]]);
                             }
 
                             $routeByStopsData = $routeByStopsTable->newEntities($arrayRoutesRelationStops);
@@ -651,10 +654,9 @@ class RoutesController extends ReaxiumAPIController
                                 }
                             }
 
-                            $routeDataTable->updateAll(array("routes_stops_count"=>$cont_stops_save),array("id_route"=>$exitIdRoute));
+                            $routeDataTable->updateAll(array("routes_stops_count"=>$cont_stops_save),array("id_route"=>$id_route));
 
                             if($validate){
-                                Log::info("ruta creada con exito...");
                                 Log::info(json_encode($arrayRoutesRelationStops));
                                 $response = parent::setSuccessfulResponse($response);
 
@@ -679,23 +681,6 @@ class RoutesController extends ReaxiumAPIController
         $this->response->body(json_encode($response));
     }
 
-
-    private function existRoute($route_number,$route_name,$routeDataTable){
-
-        $id_route = 0;
-        $routeData = $routeDataTable->findByRouteNumberAndRouteName($route_number,$route_name);
-
-        if($routeData->count() > 0){
-
-            $routeData = $routeData->toArray();
-
-            foreach($routeData as $obj){
-                $id_route = $obj['id_route'];
-            }
-        }
-
-        return $id_route;
-    }
 
 
 //TODO nuevo servicio pendiente documentacion

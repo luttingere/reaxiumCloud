@@ -22,6 +22,10 @@ class BusinessTable extends Table{
         $this->belongsTo('PhoneNumbers',array('foreignKey' => 'phone_number_id'));
         $this->belongsTo('Status', array('foreignKey' => 'status_id'));
 
+        $this->belongsToMany('ReaxiumDevice',
+            array('targetForeignKey' => 'device_id',
+                'foreignKey' => 'business_id',
+                'joinTable' => 'device_business'));
     }
 
 }
