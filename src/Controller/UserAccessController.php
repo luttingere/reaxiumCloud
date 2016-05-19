@@ -9,13 +9,90 @@
 namespace App\Controller;
 
 
+use App\Util\ReaxiumApiMessages;
 use App\Util\ReaxiumUtil;
+use Cake\Core\Exception\Exception;
 use Cake\Database\Schema\Table;
 use Cake\Log\Log;
 use Cake\ORM\TableRegistry;
 
 class UserAccessController extends ReaxiumAPIController
 {
+
+
+    public function executeAnRFIDAccessInADevice()
+    {
+        parent::setResultAsAJson();
+        $result = parent::getDefaultReaxiumMessage();
+        $jsonObjectReceived = parent::getJsonReceived();
+        Log::info("Parameter Received:");
+        Log::info(json_encode($jsonObjectReceived));
+        try {
+            if (isset($jsonObjectReceived['ReaxiumParameters']['UserAccess'])) {
+                $arrayOfParametersToValidate = array('user_id', 'device_id', 'card_code');
+                $validation = ReaxiumUtil::validateParameters($arrayOfParametersToValidate, $jsonObjectReceived['ReaxiumParameters']['UserAccess']);
+                if ($validation['code'] == '0') {
+
+                    $userId = $jsonObjectReceived['ReaxiumParameters']['UserAccess']['user_id'];
+                    $deviceId = $jsonObjectReceived['ReaxiumParameters']['UserAccess']['device_id'];
+                    $cardCode = $jsonObjectReceived['ReaxiumParameters']['UserAccess']['card_code'];
+
+                    //validate if the access exist
+                    $userAccessDataTable = TableRegistry::get("UserAccessData");
+                    $accessData = $userAccessDataTable->find('all', array('fields' => array('user_access_data_id'), 'conditions' => array('user_id' => $userId, 'rfid_code' => $cardCode)));
+
+                    if ($accessData->count() > 0) {
+
+                        $userTable = TableRegistry::get("Users");
+                        $userInfo = $userTable->find('all', array(
+                            'fields' => array('Users.user_id',
+                                'Users.first_name',
+                                'Users.first_last_name',
+                                'Users.document_id',
+                                'Users.user_photo',
+                                'Business.business_name',
+                                'UserType.user_type_name'),
+                            'conditions' => array('Users.user_id' => $userId, 'Users.status_id' => 1), 'contain' => array('Business', 'UserType')));
+
+                        Log::info("query:");
+                        Log::info($userInfo);
+                        if ($userInfo->count()) {
+                            $userInfo = $userInfo->toArray();
+                            $userTypeName = strtolower($userInfo[0]['user_type']['user_type_name']);
+                            if ($userTypeName == 'administrator' || $userTypeName == 'driver') {
+
+                                $userName = $userInfo[0]['first_name'] . ' ' . $userInfo[0]['first_last_name'];
+                                $result['ReaxiumResponse']['code'] = ReaxiumApiMessages::$SUCCESS_CODE;
+                                $result['ReaxiumResponse']['message'] = 'Access Granted, Welcome ' . $userName;
+                                $result['ReaxiumResponse']['object'] = $userInfo;
+
+                            } else {
+                                $result['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_USER_ACCESS_CODE;
+                                $result['ReaxiumResponse']['message'] = 'Invalid user type, access denied';
+                            }
+                        } else {
+                            $result['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_USER_ACCESS_CODE;
+                            $result['ReaxiumResponse']['message'] = 'The user information cannot be found';
+                        }
+                    } else {
+                        $result['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_USER_ACCESS_CODE;
+                        $result['ReaxiumResponse']['message'] = 'Invalid User';
+                    }
+
+                } else {
+                    $result['ReaxiumResponse']['code'] = 14;
+                    $result['ReaxiumResponse']['message'] = $validation['message'];
+                }
+            } else {
+                $result = parent::seInvalidParametersMessage($result);
+            }
+        } catch (\Exception $e) {
+            $result = parent::setInternalServiceError($result);
+            Log::info("Error executing a RFID access into in a device" . $e->getMessage());
+        }
+        Log::info("Response Object: " . json_encode($result));
+        $this->response->body(json_encode($result));
+    }
 
 
     public function executeAnAccessOfAUser()
@@ -40,10 +117,10 @@ class UserAccessController extends ReaxiumAPIController
                         $accessObject = $accessController->registerAUserAccess($userId, $deviceId, $accessType, $trafficType, $trafficInfo);
                         if (isset($accessObject)) {
 
-                            try{
-                                $this->executePushNotificationProcess($userId,$trafficType,$trafficInfo,$deviceId);
-                            }catch (\Exception $e){
-                                Log::info("Error enviando la notificacion push, ".$e->getMessage());
+                            try {
+                                $this->executePushNotificationProcess($userId, $trafficType, $trafficInfo, $deviceId);
+                            } catch (\Exception $e) {
+                                Log::info("Error enviando la notificacion push, " . $e->getMessage());
                             }
 
                             $result = parent::setSuccessfulResponse($result);
@@ -111,16 +188,16 @@ class UserAccessController extends ReaxiumAPIController
                 foreach ($iosAndroidTokens as $tokens) {
                     if (isset($tokens['android_id']) && '' != $tokens['android_id']) {
                         $messageItem = array('deviceId' => $tokens['android_id'], 'message' => $accessMessage);
-                        array_push($androidBulkMessage,$messageItem);
+                        array_push($androidBulkMessage, $messageItem);
                     }
                     if (isset($tokens['ios_id']) && '' != $tokens['ios_id']) {
                         $messageItem = array('deviceId' => $tokens['ios_id'], 'message' => $accessMessage);
-                        array_push($iosBulkMessage,$messageItem);
+                        array_push($iosBulkMessage, $messageItem);
                     }
                 }
                 AndroidPushController::sendBulkPush($androidBulkMessage);
                 IOSPushController::bulkSendIOSNotification($iosBulkMessage);
-            }else{
+            } else {
                 Log::info("Stakeholders without device token associated");
             }
         }
