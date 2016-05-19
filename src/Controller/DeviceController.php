@@ -15,7 +15,8 @@ use Cake\Log\Log;
 use Cake\ORM\TableRegistry;
 use App\Util\ReaxiumApiMessages;
 
-
+define("MODE_DEVICE_ID",1);
+define("MODE_ALL_DEVICE",2);
 class DeviceController extends ReaxiumAPIController
 {
 
@@ -90,18 +91,31 @@ class DeviceController extends ReaxiumAPIController
         $response = parent::getDefaultReaxiumMessage();
         $jsonObject = parent::getJsonReceived();
         Log::info('Object received: ' . json_encode($jsonObject));
+        $validate = false;
         if (parent::validReaxiumJsonHeader($jsonObject)) {
             try {
                 if (isset($jsonObject['ReaxiumParameters']["ReaxiumDevice"])) {
                     $this->loadModel("ReaxiumDevice");
                     Log::info($jsonObject['ReaxiumParameters']);
+
                     $device = $this->ReaxiumDevice->newEntity();
                     $device = $this->ReaxiumDevice->patchEntity($device, $jsonObject['ReaxiumParameters']);
+                    $business_id = !isset($device->business_id)? null : $device->business_id;
+
                     if (isset($device->device_id)) {
-                        $device = $this->getDeviceInfo($device->device_id);
+
+                        if(!isset($business_id)){
+                            $device = $this->getDeviceInfo($device->device_id);
+                        }else{
+                            $device = $this->getDeviceFilterBusiness($device->device_id,$business_id);
+
+                        }
+
                         if (isset($device)) {
+
                             $response['ReaxiumResponse']['object'] = $device;
                             $response = parent::setSuccessfulResponse($response);
+
                         } else {
                             $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
                             $response['ReaxiumResponse']['message'] = 'Device Not found';
@@ -114,7 +128,7 @@ class DeviceController extends ReaxiumAPIController
                 }
             } catch (\Exception $e) {
                 Log::info("Error: " . $e->getMessage());
-                $response = parent::seInvalidParametersMessage($response);
+                $response = parent::setInternalServiceError($response);
             }
         } else {
             $response = parent::setInvalidJsonMessage($response);
@@ -134,7 +148,7 @@ class DeviceController extends ReaxiumAPIController
     {
         $device = TableRegistry::get("ReaxiumDevice");
         $device = $device->find()
-            ->where(array('ReaxiumDevice.device_id' => $deviceId))
+            ->where(array('device_id'=>$deviceId))
             ->contain(array("Status", "Applications","Business"));
         if ($device->count() > 0) {
             $device = $device->toArray();
@@ -143,6 +157,68 @@ class DeviceController extends ReaxiumAPIController
         }
 
         return $device;
+    }
+
+
+    /**
+     * select device.device_id,
+     * device.device_name,
+     * device_description,
+     * device.status_id,
+     * device.configured,
+     * device_token,
+     * busi.business_id,
+     * busi.business_name,
+     * busi.business_id_number
+     * from reaxium.reaxium_device as device
+     * inner join reaxium.device_business as devbusi
+     * on device.device_id = devbusi.device_id
+     * inner join reaxium.business as busi
+     * on devbusi.business_id = busi.business_id
+     * and devbusi.business_id = 2
+     * and devbusi.device_id = 24
+     * @param $device_id
+     * @param $business_id
+     * @return array|\Cake\ORM\Query|null
+     */
+    private function getDeviceFilterBusiness($device_id,$business_id){
+
+        $deviceTable = TableRegistry::get("ReaxiumDevice");
+        $query = $deviceTable->find();
+        $query->select(array(
+           'ReaxiumDevice.device_id',
+            'ReaxiumDevice.device_name',
+            'ReaxiumDevice.device_description',
+            'ReaxiumDevice.status_id',
+            'ReaxiumDevice.configured',
+            'ReaxiumDevice.device_token',
+            'business.business_id',
+            'business.business_name',
+            'business.business_id_number'
+        ));
+        $query->hydrate(false);
+        $query->join(array(
+            'devbusi' => array(
+                'table'=>'device_business',
+                'type'=>'INNER',
+                'conditions'=>'ReaxiumDevice.device_id = devbusi.device_id'
+            ),
+            'business' => array(
+                'table'=>'business',
+                'type'=>'INNER',
+                'conditions'=>'devbusi.business_id = business.business_id'
+            )
+        ));
+
+        $query->andWhere(array('devbusi.device_id'=>$device_id,'devbusi.business_id'=>$business_id));
+
+        if ($query->count() > 0) {
+            $query = $query->toArray();
+        }
+        else {
+            $query = null;
+        }
+        return $query;
     }
 
 
@@ -1076,8 +1152,7 @@ class DeviceController extends ReaxiumAPIController
     }
 
 
-    public function allDeviceWithPagination()
-    {
+    public function allDeviceWithPagination(){
 
         Log::info("All Device information Service invoked");
         parent::setResultAsAJson();
@@ -1093,22 +1168,29 @@ class DeviceController extends ReaxiumAPIController
                 $sortDir = !isset($jsonObject['ReaxiumParameters']["sortDir"]) ? 'desc' : $jsonObject['ReaxiumParameters']["sortDir"];
                 $filter = !isset($jsonObject['ReaxiumParameters']["filter"]) ? '' : $jsonObject['ReaxiumParameters']["filter"];
                 $limit = !isset($jsonObject['ReaxiumParameters']["limit"]) ? 10 : $jsonObject['ReaxiumParameters']["limit"];
+                $business_id = !isset($jsonObject['ReaxiumParameters']['business_id']) ? null : $jsonObject['ReaxiumParameters']['business_id'];
 
                 $devicesTable = TableRegistry::get("ReaxiumDevice");
 
-                if (trim($filter) != '') {
-                    $whereCondition = array(array('OR' => array(
-                        array('device_name LIKE' => '%' . $filter . '%'),
-                        array('device_description LIKE' => '%' . $filter . '%'))));
+                if(isset($business_id)){
 
-                    $deviceFound = $devicesTable->find()
-                        ->where($whereCondition)
-                        ->andWhere(array('ReaxiumDevice.status_id' => 1))
-                        ->contain(array("Applications", "Status"))->order(array($sortedBy . ' ' . $sortDir));
-                } else {
-                    $deviceFound = $devicesTable->find()
-                        ->where(array('ReaxiumDevice.status_id' => 1))
-                        ->contain(array("Applications", "Status"))->order(array($sortedBy . ' ' . $sortDir));
+                    $deviceFound = $this->getDeviceFilterBusinessWithPaginate($business_id,$filter,$sortedBy,$sortDir);
+
+                }else{
+                    if (trim($filter) != '') {
+                        $whereCondition = array(array('OR' => array(
+                            array('device_name LIKE' => '%' . $filter . '%'),
+                            array('device_description LIKE' => '%' . $filter . '%'))));
+
+                        $deviceFound = $devicesTable->find()
+                            ->where($whereCondition)
+                            ->andWhere(array('ReaxiumDevice.status_id' => 1))
+                            ->contain(array("Applications", "Status","Business"))->order(array($sortedBy . ' ' . $sortDir));
+                    } else {
+                        $deviceFound = $devicesTable->find()
+                            ->where(array('ReaxiumDevice.status_id' => 1))
+                            ->contain(array("Applications", "Status","Business"))->order(array($sortedBy . ' ' . $sortDir));
+                    }
                 }
 
 
@@ -1129,7 +1211,6 @@ class DeviceController extends ReaxiumAPIController
                     $response['ReaxiumResponse']['message'] = 'No Device found';
                 }
 
-
             } else {
                 $response = parent::seInvalidParametersMessage($response);
             }
@@ -1143,6 +1224,73 @@ class DeviceController extends ReaxiumAPIController
         $this->response->body(json_encode($response));
     }
 
+
+    /**
+     * select device.device_id,
+     * device.device_name,
+     * device_description,
+     * device.status_id,
+     * device.configured,
+     * device_token,
+     * busi.business_id,
+     * busi.business_name,
+     * busi.business_id_number
+     * from reaxium.reaxium_device as device
+     * inner join reaxium.device_business as devbusi
+     * on device.device_id = devbusi.device_id
+     * inner join reaxium.business as busi
+     * on devbusi.business_id = busi.business_id
+     * and devbusi.business_id = 2
+     * and devbusi.device_id = 24
+     * @param $business_id
+     * @return array|\Cake\ORM\Query|null
+     */
+    private function getDeviceFilterBusinessWithPaginate($business_id,$filter,$sortedBy,$sortDir){
+
+        $deviceTable = TableRegistry::get("ReaxiumDevice");
+        $query = $deviceTable->find();
+        $query->select(array(
+            'ReaxiumDevice.device_id',
+            'ReaxiumDevice.device_name',
+            'ReaxiumDevice.device_description',
+            'ReaxiumDevice.status_id',
+            'ReaxiumDevice.configured',
+            'ReaxiumDevice.device_token',
+            'business.business_id',
+            'business.business_name',
+            'business.business_id_number'
+        ));
+        $query->hydrate(false);
+        $query->join(array(
+            'devbusi' => array(
+                'table'=>'device_business',
+                'type'=>'INNER',
+                'conditions'=>'ReaxiumDevice.device_id = devbusi.device_id'
+            ),
+            'business' => array(
+                'table'=>'business',
+                'type'=>'INNER',
+                'conditions'=>'devbusi.business_id = business.business_id'
+            )
+        ));
+
+        if(trim($filter) != ""){
+
+            $whereCondition = array(array('OR' => array(
+                array('ReaxiumDevice.device_name LIKE' => '%' . $filter . '%'),
+                array('ReaxiumDevice.device_description LIKE' => '%' . $filter . '%'))));
+
+            $query->where($whereCondition);
+            $query->andWhere(array('devbusi.business_id'=>$business_id,'ReaxiumDevice.status_id' => 1));
+            $query->contain(array("Applications", "Status"))->order(array($sortedBy . ' ' . $sortDir));
+        }else{
+            $query->andWhere(array('devbusi.business_id'=>$business_id,'ReaxiumDevice.status_id' => 1));
+            $query->contain(array("Applications", "Status"))->order(array($sortedBy . ' ' . $sortDir));
+        }
+
+
+        return $query;
+    }
 
     public function associateADeviceWithRoute()
     {
@@ -1261,7 +1409,7 @@ class DeviceController extends ReaxiumAPIController
 
     }
 
-    //TODO falta documentacion ojo quede aqui!
+    //TODO actualizado para resolver parametro business_id
     public function getUsersByDevice(){
 
         Log::info("getUsersByDevice service");
@@ -1279,11 +1427,18 @@ class DeviceController extends ReaxiumAPIController
                 $sortDir = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']["sortDir"]) ? 'desc' : $jsonObject['ReaxiumParameters']['ReaxiumDevice']["sortDir"];
                 $filter = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']["filter"]) ? '' : $jsonObject['ReaxiumParameters']['ReaxiumDevice']["filter"];
                 $limit = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']["limit"]) ? 10 : $jsonObject['ReaxiumParameters']['ReaxiumDevice']["limit"];
+                $business_id = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['business_id']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['business_id'];
 
 
                 if(isset($device_id)){
 
-                    $reaxiumDevice = $this->getDeviceInfo($device_id);
+                    if(isset($business_id)){
+
+                        $reaxiumDevice = $this->getDeviceFilterBusiness($device_id,$business_id);
+                    }
+                    else{
+                        $reaxiumDevice = $this->getDeviceInfo($device_id);
+                    }
 
                     if(isset($reaxiumDevice)){
 
@@ -1291,7 +1446,12 @@ class DeviceController extends ReaxiumAPIController
 
                             if ($reaxiumDevice[0]['configured'] == 1) {
 
-                                $deviceAccessData = $this->getDeviceAccessDataUsers($device_id,$filter,$sortedBy,$sortDir);
+                                if(isset($business_id)){
+                                    $deviceAccessData = $this->getDeviceAccessDataUsersFilterBusiness($device_id,$filter,$sortedBy,$sortDir,$business_id);
+                                }
+                                else{
+                                    $deviceAccessData = $this->getDeviceAccessDataUsers($device_id,$filter,$sortedBy,$sortDir);
+                                }
 
                                 $count = $deviceAccessData->count();
                                 $this->paginate = array('limit' => $limit, 'page' => $page);
@@ -1325,6 +1485,7 @@ class DeviceController extends ReaxiumAPIController
                     else{
                         $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
                         $response['ReaxiumResponse']['message'] = 'No device found with the id: ' . $device_id;
+
                     }
                 }
                 else{
@@ -1342,7 +1503,6 @@ class DeviceController extends ReaxiumAPIController
         Log::info("Responde Object: " . json_encode($response));
         $this->response->body(json_encode($response));
     }
-
 
     private function getDeviceAccessDataUsers($deviceId,$filter,$sortedBy,$sortDir){
 
@@ -1394,6 +1554,59 @@ class DeviceController extends ReaxiumAPIController
 
         return $userAccessControl;
     }
+
+
+    private function getDeviceAccessDataUsersFilterBusiness($deviceId,$filter,$sortedBy,$sortDir,$business_id){
+
+        $userAccessControlTable = TableRegistry::get("UserAccessControl");
+
+        if($filter != ""){
+
+            $whereCondition = array(array('OR' => array(
+                array('first_name LIKE' => '%' . $filter . '%'),
+                array('first_last_name LIKE' => '%' . $filter . '%'),
+                array('document_id LIKE' => '%' . $filter . '%')
+            )));
+
+            $userAccessControl = $userAccessControlTable->find('All',
+                array('fields' => array('UserAccessData.user_id',
+                    'UserAccessData.user_access_data_id',
+                    'Users.first_name',
+                    'Users.second_name',
+                    'Users.first_last_name',
+                    'Users.user_photo',
+                    'Users.birthdate',
+                    'Users.document_id',
+                    'Users.fingerprint',
+                    'Status.status_name',
+                    'AccessType.access_type_name')))
+                ->where($whereCondition)
+                ->andWhere(array('UserAccessControl.device_id' => $deviceId, 'Users.status_id' => '1','Users.business_id'=>$business_id))
+                ->contain(array('UserAccessData' => array('AccessType', 'Users' => array('UserType', 'Business', 'Status'))))
+                ->order(array($sortedBy . ' ' . $sortDir));
+
+        }else{
+
+            $userAccessControl = $userAccessControlTable->find('All',
+                array('fields' => array('UserAccessData.user_id',
+                    'UserAccessData.user_access_data_id',
+                    'Users.first_name',
+                    'Users.second_name',
+                    'Users.first_last_name',
+                    'Users.user_photo',
+                    'Users.birthdate',
+                    'Users.document_id',
+                    'Users.fingerprint',
+                    'Status.status_name',
+                    'AccessType.access_type_name')))
+                ->where(array('UserAccessControl.device_id' => $deviceId,'Users.status_id' => '1','Users.business_id'=>$business_id))
+                ->contain(array('UserAccessData' => array('AccessType', 'Users' => array('UserType', 'Business', 'Status'))))
+                ->order(array($sortedBy . ' ' . $sortDir));
+        }
+
+        return $userAccessControl;
+    }
+
 
 
     public function deleteUserAccessDevice(){

@@ -415,6 +415,7 @@ class UsersController extends ReaxiumAPIController
      *          }
      *      }
      */
+
     public function userInfo()
     {
         Log::info("User information Service invoked");
@@ -431,9 +432,15 @@ class UsersController extends ReaxiumAPIController
                     $arrayOfConditions = null;
                     $failure = false;
                     if (isset($user->user_id)) {
-                        $arrayOfConditions = array('user_id' => $user->user_id);
+
+                        $arrayOfConditions = isset($user->business_id) ?
+                            array('user_id' => $user->user_id,'Users.business_id'=>$user->business_id) : array('user_id' => $user->user_id);
+
                     } else if (isset($user->document_id)) {
-                        $arrayOfConditions = array('document_id' => $user->document_id);
+
+                        $arrayOfConditions = isset($user->business_id) ?
+                            array('document_id' => $user->document_id,'Users.business_id'=> $user->business_id) : array('document_id' => $user->document_id);
+
                     } else {
                         $failure = true;
                         $response = parent::seInvalidParametersMessage($response);
@@ -680,6 +687,7 @@ class UsersController extends ReaxiumAPIController
      *                  }
      *                }
      */
+
     public function allUsersInfoWithPagination()
     {
         Log::info("All User information eith pagination Service invoked");
@@ -697,6 +705,9 @@ class UsersController extends ReaxiumAPIController
                     $filter = !isset($jsonObject['ReaxiumParameters']["filter"]) ? '' : $jsonObject['ReaxiumParameters']["filter"];
                     $limit = !isset($jsonObject['ReaxiumParameters']["limit"]) ? 10 : $jsonObject['ReaxiumParameters']["limit"];
 
+                    $business_id = !isset($jsonObject['ReaxiumParameters']["business_id"]) ? null : $jsonObject['ReaxiumParameters']["business_id"];
+                    $andCondition = isset($business_id) ? array('Users.status_id' => 1,'Users.business_id'=>$business_id) : array('Users.status_id' => 1);
+
                     $userTable = TableRegistry::get('Users');
 
                     if (trim($filter) != '') {
@@ -707,11 +718,11 @@ class UsersController extends ReaxiumAPIController
                         )));
                         $userFound = $userTable->find()
                             ->where($whereCondition)
-                            ->andWhere(array('Users.status_id' => 1))
+                            ->andWhere($andCondition)
                             ->contain(array("Status", "UserType"))->order(array($sortedBy . ' ' . $sortDir));
                     } else {
                         $userFound = $userTable->find()
-                            ->where(array('Users.status_id' => 1))
+                            ->where($andCondition)
                             ->contain(array("Status", "UserType"))->order(array($sortedBy . ' ' . $sortDir));
                     }
 
@@ -787,6 +798,7 @@ class UsersController extends ReaxiumAPIController
      *                  }
      *                }
      */
+
     public function allUsersWithFilter()
     {
         Log::info("All User information with filter Service invoked");
@@ -804,9 +816,17 @@ class UsersController extends ReaxiumAPIController
                         array('first_last_name LIKE' => '%' . $filter . '%'),
                         array('document_id LIKE' => '%' . $filter . '%')
                     )));
+
+
+                    $business_id = !isset($jsonObject['ReaxiumParameters']['Users']['business_id']) ?
+                        null :  $jsonObject['ReaxiumParameters']['Users']['business_id'];
+
+                    $andCondition = isset($jsonObject['ReaxiumParameters']['Users']['business_id']) ?
+                        array('Users.status_id' => 1,'Users.business_id'=>$business_id) : array('Users.status_id' => 1);
+
                     $userFound = $userTable->find()
                         ->where($whereCondition)
-                        ->andWhere(array('Users.status_id' => 1))
+                        ->andWhere($andCondition)
                         ->order(array('first_name', 'first_last_name'));
 
                     if ($userFound->count() > 0) {
@@ -1036,12 +1056,85 @@ class UsersController extends ReaxiumAPIController
     /**
      * Service for get type user
      */
-    public function usersTypeList()
-    {
+    public function usersTypeList(){
+
         Log::info("Looking for the users type list ");
         parent::setResultAsAJson();
+        parent::setResultAsAJson();
         $response = parent::getDefaultReaxiumMessage();
-        $response['ReaxiumResponse']['object'] = $this->getTypeUsersList();
+        $jsonObject = parent::getJsonReceived();
+        $arrayTypeUsers=[];
+
+        if(parent::validReaxiumJsonHeader($jsonObject)){
+
+            $user_type_id = !isset($jsonObject['ReaxiumParameters']['Users']['user_type_id']) ? null : $jsonObject['ReaxiumParameters']['Users']['user_type_id'];
+
+            try{
+
+                if(isset($user_type_id)){
+
+                    $arrayAux = $this->getTypeUsersList();
+
+                    foreach($arrayAux as $entry){
+
+                        if($user_type_id === "5"){
+
+                            switch($entry['user_type_id']){
+                                case 2:
+                                    array_push($arrayTypeUsers,$entry);
+                                    break;
+                                case 3:
+                                    array_push($arrayTypeUsers,$entry);
+                                    break;
+                                case 4:
+                                    array_push($arrayTypeUsers,$entry);
+                                    break;
+                            }
+                        }
+                        elseif($user_type_id === "6"){
+
+                            switch($entry['user_type_id']){
+                                case 2:
+                                    array_push($arrayTypeUsers,$entry);
+                                    break;
+                                case 3:
+                                    array_push($arrayTypeUsers,$entry);
+                                    break;
+                                case 4:
+                                    array_push($arrayTypeUsers,$entry);
+                                    break;
+                                case 5:
+                                    array_push($arrayTypeUsers,$entry);
+                                    break;
+                                case 6:
+                                    array_push($arrayTypeUsers,$entry);
+                                    break;
+                            }
+
+                        }
+                        elseif($user_type_id === "1"){
+
+                            array_push($arrayTypeUsers,$entry);
+                        }
+
+                    }
+                }
+                else{
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+
+            }
+            catch(\Exception $e){
+                Log::info($e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+        }
+        else{
+            $response = parent::seInvalidParametersMessage($response);
+        }
+
+        $response = parent::setSuccessfulResponse($response);
+        $response['ReaxiumResponse']['object'] = $arrayTypeUsers;
         $this->response->body(json_encode($response));
     }
 

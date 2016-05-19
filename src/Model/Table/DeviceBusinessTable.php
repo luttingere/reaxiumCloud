@@ -15,5 +15,6 @@ class DeviceBusinessTable extends Table{
         parent::initialize($config);
         $this->table('device_business');
         $this->belongsTo('Business', array('foreignKey' => 'business_id'));
+        $this->belongsTo('ReaxiumDevice',array('foreignKey'=>'device_id'));
     }
 }
