@@ -1077,7 +1077,7 @@ class UsersController extends ReaxiumAPIController
 
                     foreach($arrayAux as $entry){
 
-                        if($user_type_id === "5"){
+                        if($user_type_id == 5){
 
                             switch($entry['user_type_id']){
                                 case 2:
@@ -1091,7 +1091,7 @@ class UsersController extends ReaxiumAPIController
                                     break;
                             }
                         }
-                        elseif($user_type_id === "6"){
+                        elseif($user_type_id == 6){
 
                             switch($entry['user_type_id']){
                                 case 2:
@@ -1112,7 +1112,7 @@ class UsersController extends ReaxiumAPIController
                             }
 
                         }
-                        elseif($user_type_id === "1"){
+                        elseif($user_type_id == 1){
 
                             array_push($arrayTypeUsers,$entry);
                         }
