@@ -15,7 +15,8 @@ use App\Util\ReaxiumApiMessages;
 
 define("BIOMETRIC_FILE_PATH", "/reaxium_user_images/biometric_user_images/");
 define("BIOMETRIC_FILE_FULL_PATH", "/var/www/html/reaxium_user_images/biometric_user_images/");
-
+define("ADMIN_SCHOOL",5);
+define("CALL_CENTER",6);
 class UsersController extends ReaxiumAPIController
 {
 
@@ -705,8 +706,19 @@ class UsersController extends ReaxiumAPIController
                     $filter = !isset($jsonObject['ReaxiumParameters']["filter"]) ? '' : $jsonObject['ReaxiumParameters']["filter"];
                     $limit = !isset($jsonObject['ReaxiumParameters']["limit"]) ? 10 : $jsonObject['ReaxiumParameters']["limit"];
 
-                    $business_id = !isset($jsonObject['ReaxiumParameters']["business_id"]) ? null : $jsonObject['ReaxiumParameters']["business_id"];
-                    $andCondition = isset($business_id) ? array('Users.status_id' => 1,'Users.business_id'=>$business_id) : array('Users.status_id' => 1);
+                    $userTypeId = !isset($jsonObject['ReaxiumParameters']["user_type_id"]) ? null : $jsonObject['ReaxiumParameters']["user_type_id"];
+
+                    if(isset($userTypeId) && $userTypeId == CALL_CENTER){
+                        $andCondition = array('Users.status_id' => 1,array('NOT'=>array('Users.user_type_id'=>1)));
+                    }
+                    elseif(isset($userTypeId) && $userTypeId == ADMIN_SCHOOL){
+
+                        $business_id = !isset($jsonObject['ReaxiumParameters']["business_id"]) ? null : $jsonObject['ReaxiumParameters']["business_id"];
+                        $andCondition = isset($business_id) ? array('Users.status_id' => 1,'Users.business_id'=>$business_id) : array('Users.status_id' => 1);
+                    }else{
+                        $andCondition = array('Users.status_id' => 1);
+                    }
+
 
                     $userTable = TableRegistry::get('Users');
 
@@ -818,11 +830,20 @@ class UsersController extends ReaxiumAPIController
                     )));
 
 
-                    $business_id = !isset($jsonObject['ReaxiumParameters']['Users']['business_id']) ?
-                        null :  $jsonObject['ReaxiumParameters']['Users']['business_id'];
 
-                    $andCondition = isset($jsonObject['ReaxiumParameters']['Users']['business_id']) ?
-                        array('Users.status_id' => 1,'Users.business_id'=>$business_id) : array('Users.status_id' => 1);
+                    $userTypeId = !isset($jsonObject['ReaxiumParameters']["Users"]["user_type_id"]) ? null : $jsonObject['ReaxiumParameters']["Users"]["user_type_id"];
+
+                    if(isset($userTypeId) && $userTypeId == CALL_CENTER){
+                        $andCondition = array('Users.status_id' => 1,array('NOT'=>array('Users.user_type_id'=>1)));
+                    }
+                    elseif(isset($userTypeId) && $userTypeId == ADMIN_SCHOOL){
+
+                        $business_id = !isset($jsonObject['ReaxiumParameters']['Users']["business_id"]) ? null : $jsonObject['ReaxiumParameters']['Users']["business_id"];
+                        $andCondition = isset($business_id) ? array('Users.status_id' => 1,'Users.business_id'=>$business_id) : array('Users.status_id' => 1);
+                    }else{
+                        $andCondition = array('Users.status_id' => 1);
+                    }
+
 
                     $userFound = $userTable->find()
                         ->where($whereCondition)
@@ -1087,6 +1108,9 @@ class UsersController extends ReaxiumAPIController
                                     array_push($arrayTypeUsers,$entry);
                                     break;
                                 case 4:
+                                    array_push($arrayTypeUsers,$entry);
+                                    break;
+                                case 5:
                                     array_push($arrayTypeUsers,$entry);
                                     break;
                             }
