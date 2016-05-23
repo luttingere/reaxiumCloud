@@ -1151,7 +1151,7 @@ class DeviceController extends ReaxiumAPIController
         return $userAccessControl;
     }
 
-
+   //TODO modificado filter device_serial
     public function allDeviceWithPagination(){
 
         Log::info("All Device information Service invoked");
@@ -1180,7 +1180,8 @@ class DeviceController extends ReaxiumAPIController
                     if (trim($filter) != '') {
                         $whereCondition = array(array('OR' => array(
                             array('device_name LIKE' => '%' . $filter . '%'),
-                            array('device_description LIKE' => '%' . $filter . '%'))));
+                            array('device_description LIKE' => '%' . $filter . '%'),
+                            array('device_serial LIKE' => '%' . $filter . '%'))));
 
                         $deviceFound = $devicesTable->find()
                             ->where($whereCondition)
@@ -1253,6 +1254,7 @@ class DeviceController extends ReaxiumAPIController
             'ReaxiumDevice.device_id',
             'ReaxiumDevice.device_name',
             'ReaxiumDevice.device_description',
+            'ReaxiumDevice.device_serial',  //agregado
             'ReaxiumDevice.status_id',
             'ReaxiumDevice.configured',
             'ReaxiumDevice.device_token',
@@ -1278,7 +1280,8 @@ class DeviceController extends ReaxiumAPIController
 
             $whereCondition = array(array('OR' => array(
                 array('ReaxiumDevice.device_name LIKE' => '%' . $filter . '%'),
-                array('ReaxiumDevice.device_description LIKE' => '%' . $filter . '%'))));
+                array('ReaxiumDevice.device_description LIKE' => '%' . $filter . '%'),
+                array('ReaxiumDevice.device_serial LIKE' => '%' . $filter . '%'))));
 
             $query->where($whereCondition);
             $query->andWhere(array('devbusi.business_id'=>$business_id,'ReaxiumDevice.status_id' => 1));
@@ -1841,6 +1844,7 @@ class DeviceController extends ReaxiumAPIController
      *      }
      *
      */
+
     public function createDevice(){
 
         Log::info("Create a new Device service has been invoked");
@@ -1858,6 +1862,9 @@ class DeviceController extends ReaxiumAPIController
                 $device_desc = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_description']) ?
                     null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_description'];
 
+                $device_serial = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_serial']) ?
+                    null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_serial'];
+
                 $business = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['business']) ?
                     null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['business'];
 
@@ -1865,7 +1872,7 @@ class DeviceController extends ReaxiumAPIController
                     null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id'];
 
 
-                if (isset($device_name) && isset($device_desc) && isset($business)) {
+                if (isset($device_name) && isset($device_desc) && isset($business) && isset($device_serial)) {
 
                     $deviceTable  = TableRegistry::get('ReaxiumDevice');
                     $deviceRelBusinessTable = TableRegistry::get('DeviceBusiness');
@@ -1875,26 +1882,37 @@ class DeviceController extends ReaxiumAPIController
                     if($device_id == null){
 
                         Log::info('Creacion Nuevo dispositivo');
-                        $result = $this->createANewDevice($device_name,$device_desc,$deviceTable);
-                        Log::info('Resultado: ' . $result);
 
-                        if (isset($result)) {
+                        $validateSerial = $this->checkExitsSerialDevice($device_serial,$deviceTable);
 
-                            $relationResult = $this->DeviceRelationShipBusiness($result['device_id'],$business,$deviceRelBusinessTable);
+                        if($validateSerial){
 
-                            if($relationResult){
-                                $response = parent::setSuccessfulSave($response);
-                                $response['ReaxiumResponse']['object'] = $result;
+                            $result = $this->createANewDevice($device_name,$device_desc,$device_serial,$deviceTable);
+                            Log::info('Resultado: ' . $result);
+
+                            if (isset($result)) {
+
+                                $relationResult = $this->DeviceRelationShipBusiness($result['device_id'],$business,$deviceRelBusinessTable);
+
+                                if($relationResult){
+                                    $response = parent::setSuccessfulSave($response);
+                                    $response['ReaxiumResponse']['object'] = $result;
+                                }
+                                else{
+                                    $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$CANNOT_SAVE;
+                                    $response['ReaxiumResponse']['message'] = 'There was a problem trying to save the device, please try later';
+                                }
                             }
-                            else{
+                            else {
                                 $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$CANNOT_SAVE;
                                 $response['ReaxiumResponse']['message'] = 'There was a problem trying to save the device, please try later';
                             }
                         }
-                        else {
-                            $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$CANNOT_SAVE;
-                            $response['ReaxiumResponse']['message'] = 'There was a problem trying to save the device, please try later';
+                        else{
+                            $response['ReaxiumResponse']['code'] = "1";
+                            $response['ReaxiumResponse']['message'] = 'The serial '. $device_serial .' device is already registered in the system';
                         }
+
 
                     }else{
                         /*delete business and create now*/
@@ -1926,19 +1944,47 @@ class DeviceController extends ReaxiumAPIController
         $this->response->body(json_encode($response));
     }
 
+    /**
+     * @param $serial_number
+     * @param $reaxiumDeviceTable
+     * @return bool
+     */
+    private function checkExitsSerialDevice($serial_number,$reaxiumDeviceTable){
 
-    private function createANewDevice($device_name,$device_desc,$deviceTable){
+        $validate = true;
+        $reaxiumDeviceFound = $reaxiumDeviceTable->findByDeviceSerial($serial_number);
+
+        if($reaxiumDeviceFound->count() > 0) {
+            $validate = false;
+        }
+
+        return $validate;
+    }
+
+    /**
+     * @param $device_name
+     * @param $device_desc
+     * @param $deviceTable
+     * @return mixed
+     */
+    private function createANewDevice($device_name,$device_desc,$device_serial,$deviceTable){
 
         $device = $deviceTable->newEntity();
         $device->device_name = $device_name;
         $device->device_description = $device_desc;
+        $device->device_serial = $device_serial;
 
         $result = $deviceTable->save($device);
 
         return $result;
     }
 
-
+    /**
+     * @param $deviceId
+     * @param $businessArray
+     * @param $deviceRelBussiTable
+     * @return bool
+     */
     private function DeviceRelationShipBusiness($deviceId,$businessArray,$deviceRelBussiTable){
 
         $arrayDeviceRelationBusiness = [];
