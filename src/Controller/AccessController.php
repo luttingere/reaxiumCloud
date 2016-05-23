@@ -10,11 +10,9 @@ namespace App\Controller;
 
 use App\Util\ReaxiumApiMessages;
 use App\Util\ReaxiumUtil;
-use Cake\Core\Exception\Exception;
-use Cake\Database\Schema\Table;
 use Cake\Log\Log;
 use Cake\ORM\TableRegistry;
-use PhpParser\Node\Expr\Array_;
+use Cake\Utility\Security;
 
 
 class AccessController extends ReaxiumAPIController
@@ -622,6 +620,7 @@ class AccessController extends ReaxiumAPIController
      *          }
      *      }
      */
+    //TODO modificado encriptado
     public function checkUserAccess()
     {
         Log::info("User access information Service invoked");
@@ -655,6 +654,9 @@ class AccessController extends ReaxiumAPIController
 
                                     $login_user = $jsonObject['ReaxiumParameters']['UserAccessData']['user_login_name'];
                                     $pass_user = $jsonObject['ReaxiumParameters']['UserAccessData']['user_password'];
+
+                                    //$passEncrypt = Security::hash($pass_user,'sha1',true);
+
                                     $arrayOfConditions = array('UserAccessData.access_type_id' => $access_type_id,
                                         'user_login_name' => $login_user,
                                         'user_password' => $pass_user);
@@ -901,8 +903,11 @@ class AccessController extends ReaxiumAPIController
                     $userDataAccessTable = TableRegistry::get("UserAccessData");
                     $userAccessInfo = $userDataAccessTable->findByUserIdAndAccessTypeId($user_id, $access_type_id);
 
+                    //$passWordEncrypt = Security::hash($user_password,'sha1',true);
+
                     if ($userAccessInfo->count() > 0) {
                         $userAccessInfo = $userAccessInfo->toArray();
+
                         $userDataAccessTable->updateAll(array("user_login_name" => $user_login, "user_password" => $user_password), array('user_access_data_id' => $userAccessInfo[0]['user_access_data_id']));
 
                         Log::info("LoginUser and Password actualizado para usuario: " + $user_id);
@@ -911,17 +916,24 @@ class AccessController extends ReaxiumAPIController
                         $response = parent::setSuccessfulResponse($response);
                     } else {
 
-                        $userAccessData = $userDataAccessTable->newEntity();
-                        $userAccessData->user_id = $user_id;
-                        $userAccessData->access_type_id = $access_type_id;
-                        $userAccessData->user_login_name = $user_login;
-                        $userAccessData->user_password = $user_password;
-                        $userAccessData = $userDataAccessTable->save($userAccessData);
+                        if($this->checkExistUserLoginName($user_login,$userDataAccessTable)){
 
-                        Log::info("Accesso creado para el usuario: " + $user_id);
-                        Log::info(json_encode($userAccessData));
+                            $userAccessData = $userDataAccessTable->newEntity();
+                            $userAccessData->user_id = $user_id;
+                            $userAccessData->access_type_id = $access_type_id;
+                            $userAccessData->user_login_name = $user_login;
+                            $userAccessData->user_password = $user_password;
+                            $userAccessData = $userDataAccessTable->save($userAccessData);
 
-                        $response = parent::setSuccessfulResponse($response);
+                            Log::info("Accesso creado para el usuario: " + $user_id);
+                            Log::info(json_encode($userAccessData));
+
+                            $response = parent::setSuccessfulResponse($response);
+
+                        }else{
+                            $response['ReaxiumResponse']['code'] = '2';
+                            $response['ReaxiumResponse']['message'] = "User name login is invalid please choose another ";
+                        }
                     }
 
                 } catch (\Exception $e) {
@@ -947,6 +959,25 @@ class AccessController extends ReaxiumAPIController
         }
 
         $this->response->body(json_encode($response));
+    }
+
+    /***
+     * Check userLogin exist
+     * @param $userLogin
+     * @param $userDataAccessTable
+     * @return bool
+     */
+    private function checkExistUserLoginName($userLogin,$userDataAccessTable){
+
+        $validate = true;
+
+        $userDataAccessFound = $userDataAccessTable->findByUserLoginName($userLogin);
+
+        if($userDataAccessFound->count()>0){
+            $validate = false;
+        }
+
+        return $validate;
     }
 
 
