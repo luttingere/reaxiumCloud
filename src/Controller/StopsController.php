@@ -7,6 +7,7 @@
  */
 
 namespace App\Controller;
+
 use Cake\Log\Log;
 use Cake\ORM\TableRegistry;
 use App\Util\ReaxiumApiMessages;
@@ -58,7 +59,8 @@ class StopsController extends ReaxiumAPIController
      *
      *
      */
-    public function allStopsWithPagination(){
+    public function allStopsWithPagination()
+    {
 
         Log::info("Get All Stops Service invoked");
         parent::setResultAsAJson();
@@ -142,12 +144,12 @@ class StopsController extends ReaxiumAPIController
 
             $stopList = $stopTable->find()
                 ->where($whereCondition)
-                ->andWhere(array('status_id'=>1))
+                ->andWhere(array('status_id' => 1))
                 ->order(array($sortedBy . ' ' . $sortDir));
 
         } else {
             $stopList = $stopTable->find()
-                ->where(array('status_id'=>1))
+                ->where(array('status_id' => 1))
                 ->order(array($sortedBy . ' ' . $sortDir));
         }
 
@@ -216,7 +218,7 @@ class StopsController extends ReaxiumAPIController
                     )));
                     $stopFound = $stopTable->find()
                         ->where($whereCondition)
-                        ->andWhere(array('status_id'=>1))
+                        ->andWhere(array('status_id' => 1))
                         ->order(array('stop_name', 'stop_address'));
 
                     if ($stopFound->count() > 0) {
@@ -238,7 +240,6 @@ class StopsController extends ReaxiumAPIController
             $this->response->body(json_encode($response));
         }
     }
-
 
 
     /**
@@ -279,13 +280,14 @@ class StopsController extends ReaxiumAPIController
      *
      *
      */
-    public function createStops(){
+    public function createStops()
+    {
 
         Log::info("Create Route Service invoked");
         parent::setResultAsAJson();
         $response = parent::getDefaultReaxiumMessage();
         $jsonObject = parent::getJsonReceived();
-        $validate=true;
+        $validate = true;
 
         if (parent::validReaxiumJsonHeader($jsonObject)) {
 
@@ -297,7 +299,7 @@ class StopsController extends ReaxiumAPIController
                 try {
                     $stopTable = TableRegistry::get("Stops");
 
-                    foreach($arrayObj as $entity){
+                    foreach ($arrayObj as $entity) {
 
                         $stopData = $stopTable->newEntity();
                         $stopData->stop_number = $entity['stop_number'];
@@ -314,8 +316,7 @@ class StopsController extends ReaxiumAPIController
 
                     if ($validate) {
                         $response = parent::setSuccessfulResponse($response);
-                    }
-                    else {
+                    } else {
                         Log::info('Error insertando elemento en tabla users_access_control');
                         $response = parent::setInternalServiceError($response);
                     }
@@ -386,7 +387,8 @@ class StopsController extends ReaxiumAPIController
      *
      *
      */
-    public function associationStopAndUser(){
+    public function associationStopAndUser()
+    {
 
         Log::info("Create association Stop And User invoked");
         parent::setResultAsAJson();
@@ -394,25 +396,26 @@ class StopsController extends ReaxiumAPIController
         $jsonObject = parent::getJsonReceived();
         $validate = true;
 
-        if(parent::validReaxiumJsonHeader($jsonObject)){
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
 
-            try{
+            try {
 
                 $arrayObj = !isset($jsonObject['ReaxiumParameters']['ReaxiumStops']['object']) ?
                     null : $jsonObject['ReaxiumParameters']['ReaxiumStops']['object'];
 
                 Log::info(json_encode($arrayObj));
 
-                if(isset($arrayObj)){
+                if (isset($arrayObj)) {
 
                     $stopsUserTable = TableRegistry::get("StopsUsers");
 
                     //$stopsUserData = $stopsUserTable->newEntities($arrayObj); //xq no inserta la fechas asi??
 
-                    foreach($arrayObj as $entity){
+                    foreach ($arrayObj as $entity) {
 
-                        if(!$this->checkExistRecord($stopsUserTable,
-                            $entity['id_stop'],$entity['user_id'],$entity['start_time'],$entity['end_time'])){
+                        if (!$this->checkExistRecord($stopsUserTable,
+                            $entity['id_stop'], $entity['user_id'], $entity['start_time'], $entity['end_time'])
+                        ) {
 
                             $stopsUserData = $stopsUserTable->newEntity();
                             $stopsUserData->id_stop = $entity['id_stop'];
@@ -424,9 +427,9 @@ class StopsController extends ReaxiumAPIController
                                 $validate = false;
                                 break;
                             }
-                        }else{
-                            Log::info("Registro ya existe "."id_stop:".$entity['id_stop']." user_id: "
-                                .$entity['user_id']." start_time: ".$entity['start_time']." end_time: ".$entity['end_time']);
+                        } else {
+                            Log::info("Registro ya existe " . "id_stop:" . $entity['id_stop'] . " user_id: "
+                                . $entity['user_id'] . " start_time: " . $entity['start_time'] . " end_time: " . $entity['end_time']);
                         }
                     }
 
@@ -437,15 +440,15 @@ class StopsController extends ReaxiumAPIController
                         $response = parent::setInternalServiceError($response);
                     }
 
-                }else{
+                } else {
                     $response = parent::seInvalidParametersMessage($response);
                 }
-            }catch (\Exception $e){
-                Log::info('Error create relation stops users: ' .$e->getMessage());
+            } catch (\Exception $e) {
+                Log::info('Error create relation stops users: ' . $e->getMessage());
                 $response = parent::setInternalServiceError($response);
             }
 
-        }else{
+        } else {
             $response = parent::seInvalidParametersMessage($response);
         }
         Log::info(json_encode($response));
@@ -460,19 +463,22 @@ class StopsController extends ReaxiumAPIController
      * @param $end_date
      * @return bool
      */
-    private function checkExistRecord($stopsUserTable,$id_stop,$id_user,$start_date,$end_date){
+    private function checkExistRecord($stopsUserTable, $id_stop, $id_user, $start_date, $end_date)
+    {
 
         $validate = false;
-        $arrayCondition = array('id_stop'=>$id_stop,'user_id'=>$id_user,'start_time'=>$start_date,'end_time'=>$end_date);
+        $arrayCondition = array('id_stop' => $id_stop, 'user_id' => $id_user, 'start_time' => $start_date, 'end_time' => $end_date);
         $stopsUserData = $stopsUserTable->find()->where($arrayCondition);
-        if($stopsUserData->count()>0){$validate = true;}
+        if ($stopsUserData->count() > 0) {
+            $validate = true;
+        }
 
         return $validate;
     }
 
 
-
-    public function deleteStops(){
+    public function deleteStops()
+    {
 
         Log::info("Create association Stop And User invoked");
         parent::setResultAsAJson();
@@ -480,28 +486,26 @@ class StopsController extends ReaxiumAPIController
         $jsonObject = parent::getJsonReceived();
 
 
-        if(parent::validReaxiumJsonHeader($jsonObject)){
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
 
-            try{
+            try {
                 $id_stop = !isset($jsonObject['ReaxiumParameters']['ReaxiumStops']['id_stop']) ?
                     null : $jsonObject['ReaxiumParameters']['ReaxiumStops']['id_stop'];
 
-                if(isset($id_stop)){
+                if (isset($id_stop)) {
 
                     $this->loadModel('Stops');
                     $this->Stops->updateAll(array('status_id' => '3'), array('id_stop' => $id_stop));
                     $response = parent::setSuccessfulResponse($response);
-                }
-                else{
+                } else {
                     $response = parent::seInvalidParametersMessage($response);
                 }
-            }
-            catch (\Exception $e){
-                Log::info('Error create relation stops users: ' .$e->getMessage());
+            } catch (\Exception $e) {
+                Log::info('Error create relation stops users: ' . $e->getMessage());
                 $response = parent::setInternalServiceError($response);
             }
 
-        }else{
+        } else {
             $response = parent::seInvalidParametersMessage($response);
         }
 
@@ -510,42 +514,42 @@ class StopsController extends ReaxiumAPIController
     }
 
 
-    public function getStopById(){
+    public function getStopById()
+    {
 
         Log::info("Stop by id service invoke");
         parent::setResultAsAJson();
         $response = parent::getDefaultReaxiumMessage();
         $jsonObject = parent::getJsonReceived();
 
-        if(parent::validReaxiumJsonHeader($jsonObject)){
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
 
-            try{
+            try {
 
                 $stop_id = !isset($jsonObject['ReaxiumParameters']['ReaxiumStops']['id_stop']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumStops']['id_stop'];
 
-                if(isset($stop_id)){
+                if (isset($stop_id)) {
                     $stopsTable = TableRegistry::get("Stops");
-                    $stopsData = $stopsTable->find()->where(array('id_stop'=>$stop_id,'status_id'=>1));
+                    $stopsData = $stopsTable->find()->where(array('id_stop' => $stop_id, 'status_id' => 1));
 
-                    if($stopsData->count() > 0){
+                    if ($stopsData->count() > 0) {
                         $stopsData = $stopsData->toArray();
                         $response['ReaxiumResponse']['object'] = $stopsData;
                         $response = parent::setSuccessfulResponse($response);
 
-                    }else{
-                        $response['ReaxiumResponse']['code'] =ReaxiumApiMessages::$NOT_FOUND_CODE ;
+                    } else {
+                        $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
                         $response['ReaxiumResponse']['message'] = "No stop found";
                     }
-                }else{
+                } else {
                     $response = parent::seInvalidParametersMessage($response);
                 }
-            }
-            catch (\Exception $e){
-                Log::info('Error get stop by id: ' .$e->getMessage());
+            } catch (\Exception $e) {
+                Log::info('Error get stop by id: ' . $e->getMessage());
                 $response = parent::setInternalServiceError($response);
             }
 
-        }else{
+        } else {
             $response = parent::seInvalidParametersMessage($response);
         }
 
@@ -554,7 +558,8 @@ class StopsController extends ReaxiumAPIController
     }
 
 
-    public function getUserByStops(){
+    public function getUserByStops()
+    {
 
         Log::info("Get All User by Stop Service invoked");
         parent::setResultAsAJson();
@@ -562,35 +567,35 @@ class StopsController extends ReaxiumAPIController
         $jsonObject = parent::getJsonReceived();
 
 
-        if(parent::validReaxiumJsonHeader($jsonObject)){
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
 
-            try{
+            try {
 
-                if(isset($jsonObject['ReaxiumParameters']['ReaxiumStops'])){
+                if (isset($jsonObject['ReaxiumParameters']['ReaxiumStops'])) {
 
-                    $stop_id = !isset($jsonObject['ReaxiumParameters']['ReaxiumStops']['id_stop']) ? null :$jsonObject['ReaxiumParameters']['ReaxiumStops']['id_stop'];
+                    $stop_id = !isset($jsonObject['ReaxiumParameters']['ReaxiumStops']['id_stop']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumStops']['id_stop'];
                     $page = $jsonObject['ReaxiumParameters']['ReaxiumStops']["page"];
                     $sortedBy = !isset($jsonObject['ReaxiumParameters']['ReaxiumStops']["sortedBy"]) ? 'Users.first_name' : $jsonObject['ReaxiumParameters']['ReaxiumStops']["sortedBy"];
                     $sortDir = !isset($jsonObject['ReaxiumParameters']['ReaxiumStops']["sortDir"]) ? 'desc' : $jsonObject['ReaxiumParameters']['ReaxiumStops']["sortDir"];
                     $filter = !isset($jsonObject['ReaxiumParameters']['ReaxiumStops']["filter"]) ? '' : $jsonObject['ReaxiumParameters']['ReaxiumStops']["filter"];
                     $limit = !isset($jsonObject['ReaxiumParameters']['ReaxiumStops']["limit"]) ? 10 : $jsonObject['ReaxiumParameters']['ReaxiumStops']["limit"];
 
-                    if(isset($stop_id)){
+                    if (isset($stop_id)) {
 
-                        $stops_status = $this->getStatusStop(array('id_stop'=>$stop_id));
+                        $stops_status = $this->getStatusStop(array('id_stop' => $stop_id));
 
-                        if(isset($stops_status)){
-                            if($stops_status[0]['status_id'] == ReaxiumApiMessages::$CODE_VALIDATE_STATUS){
+                        if (isset($stops_status)) {
+                            if ($stops_status[0]['status_id'] == ReaxiumApiMessages::$CODE_VALIDATE_STATUS) {
                                 //$this->loadModel('StopsUsers');
 
-                                $stopsUserFound = $this->getUserByStop($stop_id,$filter,$sortedBy,$sortDir);
+                                $stopsUserFound = $this->getUserByStop($stop_id, $filter, $sortedBy, $sortDir);
 
                                 $count = $stopsUserFound->count();
                                 $this->paginate = array('limit' => $limit, 'page' => $page);
                                 $stopsUserFound = $this->paginate($stopsUserFound);
 
 
-                                if ($stopsUserFound->count()>0) {
+                                if ($stopsUserFound->count() > 0) {
 
                                     $maxPages = floor((($count - 1) / $limit) + 1);
                                     $stopsUserFound = $stopsUserFound->toArray();
@@ -603,27 +608,26 @@ class StopsController extends ReaxiumAPIController
                                     $response['ReaxiumResponse']['code'] = "1";
                                     $response['ReaxiumResponse']['message'] = 'The stop has no members';
                                 }
-                            }else{
+                            } else {
                                 $response['ReaxiumResponse']['code'] = "2";
                                 $response['ReaxiumResponse']['message'] = 'Stop has status invalid';
                             }
                         }
 
-                    }else{
+                    } else {
                         $response['ReaxiumResponse']['code'] = "2";
                         $response['ReaxiumResponse']['message'] = 'Stop has status invalid';
                     }
 
-                }else{
+                } else {
                     $response = parent::seInvalidParametersMessage($response);
                 }
-            }
-            catch(\Exception $e){
-                Log::info('Error get stop by id: ' .$e->getMessage());
+            } catch (\Exception $e) {
+                Log::info('Error get stop by id: ' . $e->getMessage());
                 $response = parent::setInternalServiceError($response);
             }
 
-        }else{
+        } else {
             $response = parent::seInvalidParametersMessage($response);
         }
         Log::info("Responde Object: " . json_encode($response));
@@ -631,7 +635,8 @@ class StopsController extends ReaxiumAPIController
     }
 
 
-    private function getStatusStop($arrayConditions){
+    private function getStatusStop($arrayConditions)
+    {
 
         $status_stop = TableRegistry::get('Stops');
         $status_stop = $status_stop->find()->where($arrayConditions);
@@ -646,11 +651,12 @@ class StopsController extends ReaxiumAPIController
     }
 
 
-    private function getUserByStop($idDevice,$filter,$sortedBy,$sortDir){
+    private function getUserByStop($idDevice, $filter, $sortedBy, $sortDir)
+    {
 
         $stopsUsersTable = TableRegistry::get('StopsUsers');
 
-        if(trim($filter) !=""){
+        if (trim($filter) != "") {
 
             $whereCondition = array(array('OR' => array(
                 array('Users.first_name LIKE' => '%' . $filter . '%'),
@@ -659,11 +665,11 @@ class StopsController extends ReaxiumAPIController
 
             $stopUserFound = $stopsUsersTable->find()
                 ->where($whereCondition)
-                ->andWhere(array('Users.status_id' => 1,'id_stop' => $idDevice))
+                ->andWhere(array('Users.status_id' => 1, 'id_stop' => $idDevice))
                 ->contain(array('Users'))
                 ->order(array($sortedBy . ' ' . $sortDir));
 
-        }else{
+        } else {
             $stopUserFound = $stopsUsersTable->find()
                 ->where(array('id_stop' => $idDevice))
                 ->andWhere(array('Users.status_id' => 1))
@@ -674,8 +680,31 @@ class StopsController extends ReaxiumAPIController
         return $stopUserFound;
     }
 
+    public function getUserInTheStop($idStop)
+    {
+        $stopsUsersTable = TableRegistry::get('StopsUsers');
+        $userInStopArray = array();
+        $stopUserFound = $stopsUsersTable->find()
+            ->select(array('Users.user_id','StopsUsers.start_time','StopsUsers.end_time'))
+            ->where(array('id_stop' => $idStop))
+            ->andWhere(array('Users.status_id' => 1))
+            ->contain(array('Users'));
+        if($stopUserFound->count() > 0){
+            $stopUserFound = $stopUserFound->toArray();
+            foreach($stopUserFound as $user){
+                $userArray = array('user_id' =>$user['user']['user_id'],
+                    'date_init' =>$user['start_time'],
+                    'date_end' => $user['end_time']);
+                array_push($userInStopArray,$userArray);
+            }
+        }
+        return $userInStopArray;
 
-    public function deleteUserRelationShipStop(){
+    }
+
+
+    public function deleteUserRelationShipStop()
+    {
 
         Log::info("Stop by id service invoke");
         parent::setResultAsAJson();
@@ -683,28 +712,27 @@ class StopsController extends ReaxiumAPIController
         $jsonObject = parent::getJsonReceived();
 
 
-        if(parent::validReaxiumJsonHeader($jsonObject)){
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
 
-            try{
+            try {
 
                 $id_stops_user = !isset($jsonObject['ReaxiumParameters']['ReaxiumStops']['id_stops_user']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumStops']['id_stops_user'];
 
-                if(isset($id_stops_user)){
+                if (isset($id_stops_user)) {
                     $userByStopsTable = TableRegistry::get("StopsUsers");
-                    $userByStopsTable->deleteAll(array('id_stops_user'=>$id_stops_user));
+                    $userByStopsTable->deleteAll(array('id_stops_user' => $id_stops_user));
                     $response = parent::setSuccessfulDelete($response);
 
-                }else{
+                } else {
                     $response = parent::seInvalidParametersMessage($response);
                 }
 
-            }
-            catch(\Exception $e){
-                Log::info('Error get stop by id: ' .$e->getMessage());
+            } catch (\Exception $e) {
+                Log::info('Error get stop by id: ' . $e->getMessage());
                 $response = parent::setInternalServiceError($response);
             }
 
-        }else{
+        } else {
             $response = parent::seInvalidParametersMessage($response);
         }
 

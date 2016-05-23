@@ -17,10 +17,16 @@ class StopsTable extends Table{
         parent::initialize($config);
         $this->table('stops');
         $this->primaryKey('id_stop');
-        $this->belongsTo('Stops',
+        $this->belongsTo('Routes',
             array('targetForeignKey' => 'id_route',
                 'foreignKey' =>'id_stop',
                 'joinTable' =>'routesStopsRelationship'));
+
+        $this->belongsTo('Users',
+            array('targetForeignKey' => 'user_id',
+                'foreignKey' =>'id_stop',
+                'joinTable' =>'stops_users'));
+
 
 
 

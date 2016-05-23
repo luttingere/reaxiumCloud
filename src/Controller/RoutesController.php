@@ -98,14 +98,14 @@ class RoutesController extends ReaxiumAPIController
                             if ($device_status[0]['status_id'] == ReaxiumApiMessages::$CODE_VALIDATE_STATUS) {
 
 
-                                $routesDevice = $this->getRoutesByDevice($deviceId,$filter,$sortedBy,$sortDir);
+                                $routesDevice = $this->getRoutesByDevice($deviceId, $filter, $sortedBy, $sortDir);
 
                                 $count = $routesDevice->count();
                                 $this->paginate = array('limit' => $limit, 'page' => $page);
                                 $routesFound = $this->paginate($routesDevice);
 
 
-                                if ($routesFound->count()>0) {
+                                if ($routesFound->count() > 0) {
 
                                     $maxPages = floor((($count - 1) / $limit) + 1);
                                     $routeFound = $routesFound->toArray();
@@ -151,7 +151,7 @@ class RoutesController extends ReaxiumAPIController
      * @param $arrayConditions
      * @return $this|array|\Cake\ORM\Table|null
      */
-    private function getRoutesByDevice($idDevice,$filter,$sortedBy,$sortDir)
+    public function getRoutesByDevice($idDevice, $filter, $sortedBy, $sortDir)
     {
         $devicesRouteTable = TableRegistry::get('DeviceRoutes');
 
@@ -163,7 +163,7 @@ class RoutesController extends ReaxiumAPIController
 
             $deviceRouteFound = $devicesRouteTable->find()
                 ->where($whereCondition)
-                ->andWhere(array('Routes.status_id' => 1,'device_id' => $idDevice))
+                ->andWhere(array('Routes.status_id' => 1, 'device_id' => $idDevice))
                 ->contain(array('Routes'))
                 ->order(array($sortedBy . ' ' . $sortDir));
         } else {
@@ -177,6 +177,69 @@ class RoutesController extends ReaxiumAPIController
 
         return $deviceRouteFound;
     }
+
+    /**
+     * @param $idDevice
+     * @param $sortedBy
+     * @param $sortDir
+     * @return $this|array|\Cake\ORM\Table|null
+     */
+    public function getRoutesAndStopsByDevice($idDevice, $sortedBy, $sortDir)
+    {
+        $stopController = new StopsController();
+        $devicesRouteTable = TableRegistry::get('DeviceRoutes');
+        $deviceRouteFound = $devicesRouteTable->find()
+            ->where(array('device_id' => $idDevice))
+            ->andWhere(array('Routes.status_id' => 1))
+            ->contain(array('Routes' => array('Stops')))
+            ->order(array($sortedBy . ' ' . $sortDir));
+
+
+
+        $routeStopUserObject = array('routes' => array());
+
+        if ($deviceRouteFound->count() > 0) {
+            $deviceRouteFound = $deviceRouteFound->toArray();
+
+            Log::info(json_encode($deviceRouteFound));
+
+
+            foreach ($deviceRouteFound as $route) {
+
+               $routesArray = array('id_route' => $route['route']['id_route'],
+                    'route_number' => $route['route']['route_number'],
+                    'route_name' => $route['route']['route_name'],
+                    'route_address' => $route['route']['route_address'],
+                    'routes_stops_count' => $route['route']['routes_stops_count'],
+                    'route_start_date'=>$route['start_date'],
+                    'route_end_date'=>$route['end_date'],
+                    'stops' => array());
+
+
+                if (isset($route['route']['stops']) && sizeof($route['route']['stops']) > 0) {
+
+                    foreach ($route['route']['stops'] as $stop) {
+
+                        $stopArray = array('id_stop' => $stop['id_stop'],
+                            'stop_number' => $stop['stop_number'],
+                            'stop_order' => $stop['_joinData']['order_stop'],
+                            'stop_name' => $stop['stop_name'],
+                            'stop_latitude' => $stop['stop_latitude'],
+                            'stop_longitude' => $stop['stop_longitude'],
+                            'stop_address' => $stop['stop_address'],
+                            'users' =>  $stopController->getUserInTheStop($stop['id_stop']));
+
+                        array_push($routesArray['stops'], $stopArray);
+                    }
+                }
+                array_push($routeStopUserObject['routes'], $routesArray);
+            }
+        } else {
+            $routeStopUserObject = null;
+        }
+        return $routeStopUserObject;
+    }
+
 
     /**
      * @param $arrayConditions
@@ -421,18 +484,18 @@ class RoutesController extends ReaxiumAPIController
 
         try {
 
-            if(isset($jsonObject['ReaxiumParameters']["page"])){
+            if (isset($jsonObject['ReaxiumParameters']["page"])) {
 
                 $page = $jsonObject['ReaxiumParameters']["page"];
-                $sortedBy = !isset($jsonObject['ReaxiumParameters']["sortedBy"])? 'route_name':$jsonObject['ReaxiumParameters']["sortedBy"];
-                $sortDir = !isset($jsonObject['ReaxiumParameters']["sortDir"])? 'desc':$jsonObject['ReaxiumParameters']["sortDir"];
-                $filter = !isset($jsonObject['ReaxiumParameters']["filter"])? '':$jsonObject['ReaxiumParameters']["filter"];
-                $limit = !isset($jsonObject['ReaxiumParameters']["limit"])? 10:$jsonObject['ReaxiumParameters']["limit"];
+                $sortedBy = !isset($jsonObject['ReaxiumParameters']["sortedBy"]) ? 'route_name' : $jsonObject['ReaxiumParameters']["sortedBy"];
+                $sortDir = !isset($jsonObject['ReaxiumParameters']["sortDir"]) ? 'desc' : $jsonObject['ReaxiumParameters']["sortDir"];
+                $filter = !isset($jsonObject['ReaxiumParameters']["filter"]) ? '' : $jsonObject['ReaxiumParameters']["filter"];
+                $limit = !isset($jsonObject['ReaxiumParameters']["limit"]) ? 10 : $jsonObject['ReaxiumParameters']["limit"];
 
 
                 $routeTable = TableRegistry::get("Routes");
 
-                if(trim($filter) != '' ){
+                if (trim($filter) != '') {
                     $whereCondition = array(array('OR' => array(
                         array('route_number LIKE' => '%' . $filter . '%'),
                         array('route_name LIKE' => '%' . $filter . '%'),
@@ -440,12 +503,12 @@ class RoutesController extends ReaxiumAPIController
                     )));
                     $routeFound = $routeTable->find()
                         ->where($whereCondition)
-                        ->andWhere(array('Routes.status_id'=>1))
-                        ->order(array($sortedBy.' '.$sortDir));
-                }else{
+                        ->andWhere(array('Routes.status_id' => 1))
+                        ->order(array($sortedBy . ' ' . $sortDir));
+                } else {
                     $routeFound = $routeTable->find()
-                        ->where(array('Routes.status_id'=>1))
-                        ->order(array($sortedBy.' '.$sortDir));
+                        ->where(array('Routes.status_id' => 1))
+                        ->order(array($sortedBy . ' ' . $sortDir));
                 }
 
                 $count = $routeFound->count();
@@ -460,13 +523,12 @@ class RoutesController extends ReaxiumAPIController
                     $response['ReaxiumResponse']['totalPages'] = $maxPages;
                     $response['ReaxiumResponse']['object'] = $routeFound;
                     $response = parent::setSuccessfulResponse($response);
-                }
-                else {
+                } else {
                     $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
                     $response['ReaxiumResponse']['message'] = 'No Routes found';
                 }
 
-            }else{
+            } else {
                 $response = parent::seInvalidParametersMessage($response);
             }
 
@@ -482,7 +544,7 @@ class RoutesController extends ReaxiumAPIController
 
     }
 
-   //TODO nuevo servicio pendiente documentacion
+    //TODO nuevo servicio pendiente documentacion
 
     public function allStopsSystem()
     {
@@ -513,7 +575,8 @@ class RoutesController extends ReaxiumAPIController
 
 
     //TODO agregar cpmentarios
-    public function allStopsWithFilter(){
+    public function allStopsWithFilter()
+    {
 
         Log::info("All User information with filter Service invoked");
         parent::setResultAsAJson();
@@ -554,7 +617,8 @@ class RoutesController extends ReaxiumAPIController
 
     //TODO nuevo servicio pendiente documentacion
 
-    public function createRoutes(){
+    public function createRoutes()
+    {
 
         Log::info("Create Route Service invoked");
         parent::setResultAsAJson();
@@ -567,7 +631,7 @@ class RoutesController extends ReaxiumAPIController
             $route_number = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_number"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_number"];
             $route_address = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_address"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_address"];
             $stop_object = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["stops"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["stops"];
-            $id_route = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["id_route"]) ? null: $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["id_route"];
+            $id_route = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["id_route"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["id_route"];
 
 
             if (isset($route_name) && isset($route_number) && isset($route_address) && isset($stop_object)) {
@@ -577,7 +641,7 @@ class RoutesController extends ReaxiumAPIController
                     $arrayRoutesRelationStops = [];
                     $validate = true;
 
-                    if($id_route == null){
+                    if ($id_route == null) {
 
                         Log::info("Modo crear rutas");
 
@@ -588,10 +652,10 @@ class RoutesController extends ReaxiumAPIController
                         $routeData = $routeDataTable->save($routeData);
 
 
-                        if(isset($routeData)){
+                        if (isset($routeData)) {
 
-                            foreach($stop_object as $obj){
-                                array_push($arrayRoutesRelationStops,["id_route"=>$routeData["id_route"],"id_stop"=>$obj["id_stop"]]);
+                            foreach ($stop_object as $obj) {
+                                array_push($arrayRoutesRelationStops, ["id_route" => $routeData["id_route"], "id_stop" => $obj["id_stop"]]);
                             }
 
                             $routeByStopsTable = TableRegistry::get("RoutesStopsRelationship");
@@ -599,71 +663,70 @@ class RoutesController extends ReaxiumAPIController
 
                             $cont_stops_save = 0;
 
-                            foreach($routeByStopsData as $entity){
+                            foreach ($routeByStopsData as $entity) {
 
-                                if(!$routeByStopsTable->save($entity)){
+                                if (!$routeByStopsTable->save($entity)) {
                                     $validate = false;
                                     break;
-                                }else{
+                                } else {
                                     $cont_stops_save++;
                                 }
                             }
 
-                            $routeDataTable->updateAll(array("routes_stops_count"=>$cont_stops_save),array("id_route"=>$routeData["id_route"]));
+                            $routeDataTable->updateAll(array("routes_stops_count" => $cont_stops_save), array("id_route" => $routeData["id_route"]));
 
 
-                            if($validate){
+                            if ($validate) {
 
                                 Log::info("ruta creada con exito...");
                                 Log::info(json_encode($arrayRoutesRelationStops));
                                 $response = parent::setSuccessfulResponse($response);
 
-                            }else{
+                            } else {
                                 Log::info('Error insertando elemento en tabla users_access_control');
                                 $response = parent::setInternalServiceError($response);
                             }
 
-                        }else{
+                        } else {
                             Log::info("Ruta no pudo se creada");
                             $response = parent::setInternalServiceError($response);
                         }
-                    }
-                    else{
+                    } else {
                         //si existe se borran las paradas asociadas
 
                         Log::info("Mode editar rutas");
 
                         $routeByStopsTable = TableRegistry::get("RoutesStopsRelationship");
-                        $routeByStopsTable->deleteAll(["id_route"=>$id_route]);
+                        $routeByStopsTable->deleteAll(["id_route" => $id_route]);
 
-                            foreach($stop_object as $obj){
-                                array_push($arrayRoutesRelationStops,["id_route"=>$id_route,"id_stop"=>$obj["id_stop"]]);
+                        foreach ($stop_object as $obj) {
+                            array_push($arrayRoutesRelationStops, ["id_route" => $id_route, "id_stop" => $obj["id_stop"]]);
+                        }
+
+                        $routeByStopsData = $routeByStopsTable->newEntities($arrayRoutesRelationStops);
+
+                        $cont_stops_save = 0;
+
+                        foreach ($routeByStopsData as $entity) {
+
+                            if (!$routeByStopsTable->save($entity)) {
+                                $validate = false;
+                                break;
+                            } else {
+                                $cont_stops_save++;
                             }
+                        }
 
-                            $routeByStopsData = $routeByStopsTable->newEntities($arrayRoutesRelationStops);
+                        $routeDataTable->updateAll(array("routes_stops_count" => $cont_stops_save), array("id_route" => $id_route));
 
-                            $cont_stops_save = 0;
+                        if ($validate) {
+                            Log::info(json_encode($arrayRoutesRelationStops));
+                            $response = parent::setSuccessfulResponse($response);
 
-                            foreach($routeByStopsData as $entity){
-
-                                if(!$routeByStopsTable->save($entity)){
-                                    $validate = false;
-                                    break;
-                                }else{
-                                    $cont_stops_save++;
-                                }
-                            }
-
-                            $routeDataTable->updateAll(array("routes_stops_count"=>$cont_stops_save),array("id_route"=>$id_route));
-
-                            if($validate){
-                                Log::info(json_encode($arrayRoutesRelationStops));
-                                $response = parent::setSuccessfulResponse($response);
-
-                            }else{
-                                Log::info('Error insertando elemento en tabla users_access_control');
-                                $response = parent::setInternalServiceError($response);
-                            }
+                        } else {
+                            Log::info('Error insertando elemento en tabla users_access_control');
+                            $response = parent::setInternalServiceError($response);
+                        }
                     }
 
                 } catch (\Exception $e) {
@@ -682,9 +745,9 @@ class RoutesController extends ReaxiumAPIController
     }
 
 
-
 //TODO nuevo servicio pendiente documentacion
-    public function createStops(){
+    public function createStops()
+    {
 
         Log::info("Create Route Service invoked");
         parent::setResultAsAJson();
@@ -699,11 +762,11 @@ class RoutesController extends ReaxiumAPIController
             $stop_longitude = !isset($jsonObject["ReaxiumParameters"]["Stops"]["stop_longitude"]) ? null : $jsonObject["ReaxiumParameters"]["Stops"]["stop_longitude"];
             $stop_address = !isset($jsonObject["ReaxiumParameters"]["Stops"]["stop_address"]) ? null : $jsonObject["ReaxiumParameters"]["Stops"]["stop_address"];
 
-            if(isset($stop_number) && isset($stop_name) && isset($stop_latitude) && isset($stop_longitude) && isset($stop_address)) {
+            if (isset($stop_number) && isset($stop_name) && isset($stop_latitude) && isset($stop_longitude) && isset($stop_address)) {
 
-                try{
+                try {
                     $stopTable = TableRegistry::get("Stops");
-                    $stopData= $stopTable->newEntity();
+                    $stopData = $stopTable->newEntity();
                     $stopData->stop_number = $stop_number;
                     $stopData->stop_name = $stop_name;
                     $stopData->stop_latitude = $stop_latitude;
@@ -715,26 +778,24 @@ class RoutesController extends ReaxiumAPIController
                     Log::info(json_encode($stopData));
 
                     $response = parent::setSuccessfulResponse($response);
-                }
-                catch(\Exception $e){
+                } catch (\Exception $e) {
                     Log::info('Error create route in system:');
                     Log::info($e->getMessage());
                     $response = parent::setInternalServiceError($response);
                 }
-            }
-            else{
+            } else {
                 $response = parent::seInvalidParametersMessage($response);
             }
-        }
-        else{
+        } else {
             $response = parent::seInvalidParametersMessage($response);
         }
-            $this->response->body(json_encode($response));
+        $this->response->body(json_encode($response));
     }
 
 
     //TODO nuevo servicio pendiente documentacion
-    public function getRouteByIdRelationStop(){
+    public function getRouteByIdRelationStop()
+    {
 
         Log::info("Get Route by Id Service invoked");
         parent::setResultAsAJson();
@@ -742,43 +803,40 @@ class RoutesController extends ReaxiumAPIController
         $jsonObject = parent::getJsonReceived();
 
 
-        if(parent::validReaxiumJsonHeader($jsonObject)){
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
 
             $id_route = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["id_route"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["id_route"];
 
-            if(isset($id_route)){
+            if (isset($id_route)) {
 
-                try{
+                try {
                     $routeTable = TableRegistry::get("Routes");
                     $routeData = $routeTable
                         ->find()
-                        ->where(array('id_route'=>$id_route))
+                        ->where(array('id_route' => $id_route))
                         ->contain(array('Stops'));
 
-                    if($routeData->count() > 0){
+                    if ($routeData->count() > 0) {
                         $routeData = $routeData->toArray();
 
                         Log::info(json_encode($routeData));
                         $response['ReaxiumResponse']['object'] = $routeData;
                         $response = parent::setSuccessfulResponse($response);
-                    }else{
+                    } else {
                         $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
                         $response['ReaxiumResponse']['message'] = 'No Routes found';
-                        $response['ReaxiumResponse']['object']=[];
+                        $response['ReaxiumResponse']['object'] = [];
                     }
-                }
-                catch(\Exception $e){
+                } catch (\Exception $e) {
 
                     Log::info($e->getMessage());
                     $response = parent::setInternalServiceError($response);
                 }
-            }
-            else{
+            } else {
                 $response = parent::seInvalidParametersMessage($response);
             }
 
-        }
-        else{
+        } else {
             $response = parent::seInvalidParametersMessage($response);
         }
 
@@ -786,17 +844,18 @@ class RoutesController extends ReaxiumAPIController
     }
 
 
-    public function allRouteWithFilter(){
+    public function allRouteWithFilter()
+    {
 
         Log::info("All Route information with filter Service invoked");
         parent::setResultAsAJson();
         $response = parent::getDefaultReaxiumMessage();
         $jsonObject = parent::getJsonReceived();
 
-        if(parent::validReaxiumJsonHeader($jsonObject)){
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
 
-            try{
-                if(isset($jsonObject['ReaxiumParameters']['ReaxiumRoutes']['filter'])){
+            try {
+                if (isset($jsonObject['ReaxiumParameters']['ReaxiumRoutes']['filter'])) {
 
                     $routeTable = TableRegistry::get("Routes");
                     $filter = $jsonObject['ReaxiumParameters']['ReaxiumRoutes']['filter'];
@@ -806,8 +865,8 @@ class RoutesController extends ReaxiumAPIController
 
                     $routeFound = $routeTable->find()
                         ->where($whereCondition)
-                        ->andWhere(array('Routes.status_id'=>1))
-                        ->order(array('route_number','route_name'));
+                        ->andWhere(array('Routes.status_id' => 1))
+                        ->order(array('route_number', 'route_name'));
 
                     if ($routeFound->count() > 0) {
                         $routeFound = $routeFound->toArray();
@@ -817,12 +876,10 @@ class RoutesController extends ReaxiumAPIController
                         $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
                         $response['ReaxiumResponse']['message'] = 'No Users found';
                     }
-                }
-                else{
+                } else {
                     $response = parent::seInvalidParametersMessage($response);
                 }
-            }
-            catch (\Exception $e){
+            } catch (\Exception $e) {
                 Log::info("Error getting the route " . $e->getMessage());
                 $response = parent::setInternalServiceError($response);
             }
@@ -833,7 +890,8 @@ class RoutesController extends ReaxiumAPIController
     }
 
 
-    public function deleteRoute(){
+    public function deleteRoute()
+    {
 
         Log::info("deleting  Route service is running");
         parent::setResultAsAJson();
@@ -841,43 +899,39 @@ class RoutesController extends ReaxiumAPIController
         $jsonObject = parent::getJsonReceived();
         $id_route = null;
 
-        if(parent::validReaxiumJsonHeader($jsonObject)){
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
 
-            try{
-               if(isset($jsonObject['ReaxiumParameters']['ReaxiumRoutes'])){
-                   $this->loadModel('Routes');
-                   $route = $this->Routes->newEntity();
-                   $route = $this->Routes->patchEntity($route,$jsonObject['ReaxiumParameters']['ReaxiumRoutes']);
+            try {
+                if (isset($jsonObject['ReaxiumParameters']['ReaxiumRoutes'])) {
+                    $this->loadModel('Routes');
+                    $route = $this->Routes->newEntity();
+                    $route = $this->Routes->patchEntity($route, $jsonObject['ReaxiumParameters']['ReaxiumRoutes']);
 
-                   if(isset($route->id_route)){
-                       $id_route =  $route->id_route;
-                       $route = $this->getRouteInfo($id_route);
-                       if(isset($route)){
-                        $this->deleteARoute($id_route);
-                           $response = parent::setSuccessfulDelete($response);
-                       }
-                       else{
-                           $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
-                           $response['ReaxiumResponse']['message'] = 'Device Not found';
-                       }
-                   }
-                   else{
-                       Log::info('Entro aqui 1');
-                       $response = parent::seInvalidParametersMessage($response);
-                   }
-               }
-               else{
-                   Log::info('Entro aqui 2');
-                   $response = parent::seInvalidParametersMessage($response);
-               }
+                    if (isset($route->id_route)) {
+                        $id_route = $route->id_route;
+                        $route = $this->getRouteInfo($id_route);
+                        if (isset($route)) {
+                            $this->deleteARoute($id_route);
+                            $response = parent::setSuccessfulDelete($response);
+                        } else {
+                            $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                            $response['ReaxiumResponse']['message'] = 'Device Not found';
+                        }
+                    } else {
+                        Log::info('Entro aqui 1');
+                        $response = parent::seInvalidParametersMessage($response);
+                    }
+                } else {
+                    Log::info('Entro aqui 2');
+                    $response = parent::seInvalidParametersMessage($response);
+                }
 
-            }
-            catch(\Exception $e){
+            } catch (\Exception $e) {
                 Log::info("Error deleting the route: " . $id_route . " error:" . $e->getMessage());
                 $response = parent::setInternalServiceError($response);
             }
 
-        }else{
+        } else {
             Log::info('Entro aqui 3');
             $response = parent::setInvalidJsonMessage($response);
         }
@@ -887,9 +941,10 @@ class RoutesController extends ReaxiumAPIController
     }
 
 
-    private function getRouteInfo($routeId){
+    private function getRouteInfo($routeId)
+    {
 
-        Log::info("Id Ruta: ".$routeId);
+        Log::info("Id Ruta: " . $routeId);
 
         $routeTable = TableRegistry::get('Routes');
         $routeData = $routeTable->findByIdRoute($routeId);
@@ -905,12 +960,12 @@ class RoutesController extends ReaxiumAPIController
     }
 
 
-    private function deleteARoute($routeId){
+    private function deleteARoute($routeId)
+    {
 
         $this->loadModel('Routes');
         $this->Routes->updateAll(array('status_id' => '3'), array('id_route' => $routeId));
     }
-
 
 
 }

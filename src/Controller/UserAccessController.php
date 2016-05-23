@@ -29,12 +29,12 @@ class UserAccessController extends ReaxiumAPIController
         Log::info(json_encode($jsonObjectReceived));
         try {
             if (isset($jsonObjectReceived['ReaxiumParameters']['UserAccess'])) {
-                $arrayOfParametersToValidate = array('user_id', 'device_id', 'card_code');
+                $arrayOfParametersToValidate = array('user_id', 'device_id', 'card_code', 'device_token');
                 $validation = ReaxiumUtil::validateParameters($arrayOfParametersToValidate, $jsonObjectReceived['ReaxiumParameters']['UserAccess']);
                 if ($validation['code'] == '0') {
 
-                    $userId = $jsonObjectReceived['ReaxiumParameters']['UserAccess']['user_id'];
                     $deviceId = $jsonObjectReceived['ReaxiumParameters']['UserAccess']['device_id'];
+                    $userId = $jsonObjectReceived['ReaxiumParameters']['UserAccess']['user_id'];
                     $cardCode = $jsonObjectReceived['ReaxiumParameters']['UserAccess']['card_code'];
 
                     //validate if the access exist
@@ -59,12 +59,35 @@ class UserAccessController extends ReaxiumAPIController
                         if ($userInfo->count()) {
                             $userInfo = $userInfo->toArray();
                             $userTypeName = strtolower($userInfo[0]['user_type']['user_type_name']);
+                            $additionalMessage = '';
+                            $finalObject = null;
                             if ($userTypeName == 'administrator' || $userTypeName == 'driver') {
 
+                                if($userTypeName == 'driver'){
+                                    //Init the process of getting all device information
+
+
+                                    $accessBulkObject = !isset($jsonObjectReceived['ReaxiumParameters']['UserAccess']['accessBulkObject']) ? null : $jsonObjectReceived['ReaxiumParameters']['UserAccess']['accessBulkObject'];
+                                    $deviceToken = $jsonObjectReceived['ReaxiumParameters']['UserAccess']['device_token'];
+
+                                    $synchroniceObject = new SynchroController();
+                                    $synchroniceData = $synchroniceObject->synchronizeAtLogin($deviceId, $deviceToken, $accessBulkObject);
+
+                                    if ($synchroniceData['code'] != ReaxiumApiMessages::$SUCCESS_CODE) {
+                                        $additionalMessage = 'Synchronization failure';
+                                    }
+
+                                    $finalObject = array('user'=>$userInfo[0],'deviceData'=> $synchroniceData['object']);
+
+                                }else{
+
+                                    $finalObject = array('user'=>$userInfo[0],'deviceData'=> null);
+
+                                }
                                 $userName = $userInfo[0]['first_name'] . ' ' . $userInfo[0]['first_last_name'];
                                 $result['ReaxiumResponse']['code'] = ReaxiumApiMessages::$SUCCESS_CODE;
-                                $result['ReaxiumResponse']['message'] = 'Access Granted, Welcome ' . $userName;
-                                $result['ReaxiumResponse']['object'] = $userInfo;
+                                $result['ReaxiumResponse']['message'] = 'Access Granted, Welcome ' . $userName . ' ' . $additionalMessage;
+                                $result['ReaxiumResponse']['object'] = array($finalObject);
 
                             } else {
                                 $result['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_USER_ACCESS_CODE;
@@ -91,6 +114,104 @@ class UserAccessController extends ReaxiumAPIController
             Log::info("Error executing a RFID access into in a device" . $e->getMessage());
         }
         Log::info("Response Object: " . json_encode($result));
+
+        $this->response->body(json_encode($result));
+    }
+
+
+    public function executeUserAndPasswordAccessInADevice()
+    {
+        parent::setResultAsAJson();
+        $result = parent::getDefaultReaxiumMessage();
+        $jsonObjectReceived = parent::getJsonReceived();
+        Log::info("Parameter Received:");
+        Log::info(json_encode($jsonObjectReceived));
+        try {
+            if (isset($jsonObjectReceived['ReaxiumParameters']['UserAccess'])) {
+                $arrayOfParametersToValidate = array('user_name', 'user_password', 'device_id', 'device_token');
+                $validation = ReaxiumUtil::validateParameters($arrayOfParametersToValidate, $jsonObjectReceived['ReaxiumParameters']['UserAccess']);
+                if ($validation['code'] == '0') {
+
+                    $useName = $jsonObjectReceived['ReaxiumParameters']['UserAccess']['user_name'];
+                    $userPassword = $jsonObjectReceived['ReaxiumParameters']['UserAccess']['user_password'];
+
+                    //validate if the access exist
+                    $userAccessDataTable = TableRegistry::get("UserAccessData");
+                    $accessData = $userAccessDataTable->find('all', array('fields' => array('user_id'), 'conditions' => array('user_login_name' => $useName, 'user_password' => $userPassword)));
+
+                    if ($accessData->count() > 0) {
+                        $accessData = $accessData->toArray();
+                        $userTable = TableRegistry::get("Users");
+                        $userInfo = $userTable->find('all', array(
+                            'fields' => array('Users.user_id',
+                                'Users.first_name',
+                                'Users.first_last_name',
+                                'Users.document_id',
+                                'Users.user_photo',
+                                'Business.business_name',
+                                'UserType.user_type_name'),
+                            'conditions' => array('Users.user_id' => $accessData[0]['user_id'], 'Users.status_id' => 1), 'contain' => array('Business', 'UserType')));
+
+                        Log::info("query:");
+                        Log::info($userInfo);
+                        if ($userInfo->count()) {
+                            $userInfo = $userInfo->toArray();
+                            $userTypeName = strtolower($userInfo[0]['user_type']['user_type_name']);
+                            $additionalMessage = '';
+                            if ($userTypeName == 'administrator' || $userTypeName == 'driver') {
+
+                                if($userTypeName == 'driver'){
+                                    //Init the process of getting all device information
+
+                                    $deviceId = $jsonObjectReceived['ReaxiumParameters']['UserAccess']['device_id'];
+                                    $accessBulkObject = !isset($jsonObjectReceived['ReaxiumParameters']['UserAccess']['accessBulkObject']) ? null : $jsonObjectReceived['ReaxiumParameters']['UserAccess']['accessBulkObject'];
+                                    $deviceToken = $jsonObjectReceived['ReaxiumParameters']['UserAccess']['device_token'];
+
+                                    $synchroniceObject = new SynchroController();
+                                    $synchroniceData = $synchroniceObject->synchronizeAtLogin($deviceId, $deviceToken, $accessBulkObject);
+
+                                    if ($synchroniceData['code'] != ReaxiumApiMessages::$SUCCESS_CODE) {
+                                        $additionalMessage = 'Synchronization failure';
+                                    }
+
+                                    $finalObject = array('user'=>$userInfo[0],'deviceData'=> $synchroniceData['object']);
+
+                                }else{
+
+                                    $finalObject = array('user'=>$userInfo[0],'deviceData'=> null);
+
+                                }
+                                $userName = $userInfo[0]['first_name'] . ' ' . $userInfo[0]['first_last_name'];
+                                $result['ReaxiumResponse']['code'] = ReaxiumApiMessages::$SUCCESS_CODE;
+                                $result['ReaxiumResponse']['message'] = 'Access Granted, Welcome ' . $userName . ' ' . $additionalMessage;
+                                $result['ReaxiumResponse']['object'] = array($finalObject);
+
+                            } else {
+                                $result['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_USER_ACCESS_CODE;
+                                $result['ReaxiumResponse']['message'] = 'Invalid user type, access denied';
+                            }
+                        } else {
+                            $result['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_USER_ACCESS_CODE;
+                            $result['ReaxiumResponse']['message'] = 'The user information cannot be found';
+                        }
+                    } else {
+                        $result['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_USER_ACCESS_CODE;
+                        $result['ReaxiumResponse']['message'] = 'Invalid User';
+                    }
+
+                } else {
+                    $result['ReaxiumResponse']['code'] = 14;
+                    $result['ReaxiumResponse']['message'] = $validation['message'];
+                }
+            } else {
+                $result = parent::seInvalidParametersMessage($result);
+            }
+        } catch (\Exception $e) {
+            $result = parent::setInternalServiceError($result);
+            Log::info("Error executing a RFID access into in a device" . $e->getMessage());
+        }
+        Log::info("Response Object: " . json_encode($result));
+
         $this->response->body(json_encode($result));
     }
 
