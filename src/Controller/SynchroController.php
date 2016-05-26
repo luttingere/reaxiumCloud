@@ -98,7 +98,6 @@ class SynchroController extends ReaxiumAPIController
                 if ($reaxiumDevice[0]['status_id'] == 1) {
                     if ($reaxiumDevice[0]['configured'] == 1) {
 
-
                         //Save the device token in any synchronize action
                         $fields = array('device_token' => $deviceToken);
                         $conditions = array('device_id' => $deviceId);

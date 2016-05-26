@@ -208,6 +208,7 @@ class RoutesController extends ReaxiumAPIController
 
                $routesArray = array('id_route' => $route['route']['id_route'],
                     'route_number' => $route['route']['route_number'],
+                    'route_type' => $route['route']['route_type'],
                     'route_name' => $route['route']['route_name'],
                     'route_address' => $route['route']['route_address'],
                     'routes_stops_count' => $route['route']['routes_stops_count'],
@@ -632,9 +633,9 @@ class RoutesController extends ReaxiumAPIController
             $route_address = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_address"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_address"];
             $stop_object = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["stops"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["stops"];
             $id_route = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["id_route"]) ? null: $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["id_route"];
-            $route_type = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_type_id"]) ? null: $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_type_id"];
+//            $route_type = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_type_id"]) ? null: $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_type_id"];
 
-            if (isset($route_name) && isset($route_number) && isset($route_address) && isset($stop_object) && isset($route_type)) {
+            if (isset($route_name) && isset($route_number) && isset($route_address) && isset($stop_object)) {
 
                 try {
                     $routeDataTable = TableRegistry::get("Routes");
@@ -649,13 +650,14 @@ class RoutesController extends ReaxiumAPIController
                         $routeData->route_number = $route_number;
                         $routeData->route_name = $route_name;
                         $routeData->route_address = $route_address;
-                        $routeData->route_type = $route_type;
+//                        $routeData->route_type = $route_type;
                         $routeData = $routeDataTable->save($routeData);
 
                         if(isset($routeData)){
 
                             foreach($stop_object as $obj){
-                                array_push($arrayRoutesRelationStops,["id_route"=>$routeData["id_route"],"id_stop"=>$obj["id_stop"],"order_stop"=>$obj["order_stop"]]);
+//                                array_push($arrayRoutesRelationStops,["id_route"=>$routeData["id_route"],"id_stop"=>$obj["id_stop"],"order_stop"=>$obj["order_stop"]]);
+                                array_push($arrayRoutesRelationStops,["id_route"=>$routeData["id_route"],"id_stop"=>$obj["id_stop"]]);
                             }
 
                             $routeByStopsTable = TableRegistry::get("RoutesStopsRelationship");

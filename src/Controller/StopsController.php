@@ -147,6 +147,8 @@ class StopsController extends ReaxiumAPIController
                 ->andWhere(array('status_id' => 1))
                 ->order(array($sortedBy . ' ' . $sortDir));
 
+            Log::info($stopList);
+
         } else {
             $stopList = $stopTable->find()
                 ->where(array('status_id' => 1))

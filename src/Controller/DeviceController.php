@@ -15,8 +15,9 @@ use Cake\Log\Log;
 use Cake\ORM\TableRegistry;
 use App\Util\ReaxiumApiMessages;
 
-define("MODE_DEVICE_ID",1);
-define("MODE_ALL_DEVICE",2);
+define("MODE_DEVICE_ID", 1);
+define("MODE_ALL_DEVICE", 2);
+
 class DeviceController extends ReaxiumAPIController
 {
 
@@ -100,14 +101,14 @@ class DeviceController extends ReaxiumAPIController
 
                     $device = $this->ReaxiumDevice->newEntity();
                     $device = $this->ReaxiumDevice->patchEntity($device, $jsonObject['ReaxiumParameters']);
-                    $business_id = !isset($device->business_id)? null : $device->business_id;
+                    $business_id = !isset($device->business_id) ? null : $device->business_id;
 
                     if (isset($device->device_id)) {
 
-                        if(!isset($business_id)){
+                        if (!isset($business_id)) {
                             $device = $this->getDeviceInfo($device->device_id);
-                        }else{
-                            $device = $this->getDeviceFilterBusiness($device->device_id,$business_id);
+                        } else {
+                            $device = $this->getDeviceFilterBusiness($device->device_id, $business_id);
 
                         }
 
@@ -148,8 +149,8 @@ class DeviceController extends ReaxiumAPIController
     {
         $device = TableRegistry::get("ReaxiumDevice");
         $device = $device->find()
-            ->where(array('device_id'=>$deviceId))
-            ->contain(array("Status", "Applications","Business"));
+            ->where(array('device_id' => $deviceId))
+            ->contain(array("Status", "Applications", "Business"));
         if ($device->count() > 0) {
             $device = $device->toArray();
         } else {
@@ -181,12 +182,13 @@ class DeviceController extends ReaxiumAPIController
      * @param $business_id
      * @return array|\Cake\ORM\Query|null
      */
-    private function getDeviceFilterBusiness($device_id,$business_id){
+    private function getDeviceFilterBusiness($device_id, $business_id)
+    {
 
         $deviceTable = TableRegistry::get("ReaxiumDevice");
         $query = $deviceTable->find();
         $query->select(array(
-           'ReaxiumDevice.device_id',
+            'ReaxiumDevice.device_id',
             'ReaxiumDevice.device_name',
             'ReaxiumDevice.device_description',
             'ReaxiumDevice.status_id',
@@ -199,23 +201,22 @@ class DeviceController extends ReaxiumAPIController
         $query->hydrate(false);
         $query->join(array(
             'devbusi' => array(
-                'table'=>'device_business',
-                'type'=>'INNER',
-                'conditions'=>'ReaxiumDevice.device_id = devbusi.device_id'
+                'table' => 'device_business',
+                'type' => 'INNER',
+                'conditions' => 'ReaxiumDevice.device_id = devbusi.device_id'
             ),
             'business' => array(
-                'table'=>'business',
-                'type'=>'INNER',
-                'conditions'=>'devbusi.business_id = business.business_id'
+                'table' => 'business',
+                'type' => 'INNER',
+                'conditions' => 'devbusi.business_id = business.business_id'
             )
         ));
 
-        $query->andWhere(array('devbusi.device_id'=>$device_id,'devbusi.business_id'=>$business_id));
+        $query->andWhere(array('devbusi.device_id' => $device_id, 'devbusi.business_id' => $business_id));
 
         if ($query->count() > 0) {
             $query = $query->toArray();
-        }
-        else {
+        } else {
             $query = null;
         }
         return $query;
@@ -307,7 +308,6 @@ class DeviceController extends ReaxiumAPIController
         }
         return $devices;
     }
-
 
 
     /**
@@ -1018,7 +1018,7 @@ class DeviceController extends ReaxiumAPIController
                 if (isset($jsonObject['ReaxiumParameters']["ReaxiumDevice"])) {
                     $deviceId = $jsonObject['ReaxiumParameters']["ReaxiumDevice"]['device_id'];
                     $deviceToken = $jsonObject['ReaxiumParameters']["ReaxiumDevice"]['device_token'];
-                    $accessBulkObject = !isset($jsonObject['ReaxiumParameters']["ReaxiumDevice"]["accessBulkObject"])?null:$jsonObject['ReaxiumParameters']["ReaxiumDevice"]['accessBulkObject'];
+                    $accessBulkObject = !isset($jsonObject['ReaxiumParameters']["ReaxiumDevice"]["accessBulkObject"]) ? null : $jsonObject['ReaxiumParameters']["ReaxiumDevice"]['accessBulkObject'];
                     if (isset($deviceId) && isset($deviceToken)) {
                         $reaxiumDevice = $this->getDeviceInfo($deviceId);
                         if (isset($reaxiumDevice)) {
@@ -1032,12 +1032,12 @@ class DeviceController extends ReaxiumAPIController
 
                                     $deviceAccessData = $this->getDeviceAccessData($deviceId);
 
-                                    if(isset($accessBulkObject)){
-                                        try{
+                                    if (isset($accessBulkObject)) {
+                                        try {
                                             Log::info("Saving the device access control records");
                                             $this->saveBulkOfDeviceAccess($accessBulkObject);
-                                        }catch(\Exception $e){
-                                            Log::info("Error: ". $e->getMessage());
+                                        } catch (\Exception $e) {
+                                            Log::info("Error: " . $e->getMessage());
                                         }
                                     }
 
@@ -1075,15 +1075,16 @@ class DeviceController extends ReaxiumAPIController
     }
 
 
-    private function saveBulkOfDeviceAccess($bulkOfAccessObject){
+    private function saveBulkOfDeviceAccess($bulkOfAccessObject)
+    {
         $accessController = new AccessController();
-        foreach($bulkOfAccessObject as $accessObject){
+        foreach ($bulkOfAccessObject as $accessObject) {
             try {
                 $userId = $accessObject['userId'];
                 $deviceId = $accessObject['deviceId'];
                 $trafficType = $accessObject['accessType'];
                 $trafficTypeId = null;
-                switch($trafficType){
+                switch ($trafficType) {
                     case 'IN':
                         $trafficTypeId = 1;
                         break;
@@ -1093,7 +1094,7 @@ class DeviceController extends ReaxiumAPIController
                 }
                 $accessType = $accessObject['userAccessType'];
                 $accessTypeId = null;
-                switch($accessType){
+                switch ($accessType) {
                     case 'BIOMETRIC':
                         $accessTypeId = 2;
                         break;
@@ -1109,8 +1110,8 @@ class DeviceController extends ReaxiumAPIController
                     $trafficTypeId,
                     $trafficInfo);
 
-            }catch(\Exception $e){
-                Log::info("Error saving an access in the server, ".$e->getMessage());
+            } catch (\Exception $e) {
+                Log::info("Error saving an access in the server, " . $e->getMessage());
             }
         }
     }
@@ -1151,8 +1152,9 @@ class DeviceController extends ReaxiumAPIController
         return $userAccessControl;
     }
 
-   //TODO modificado filter device_serial
-    public function allDeviceWithPagination(){
+    //TODO modificado filter device_serial
+    public function allDeviceWithPagination()
+    {
 
         Log::info("All Device information Service invoked");
         parent::setResultAsAJson();
@@ -1172,13 +1174,14 @@ class DeviceController extends ReaxiumAPIController
 
                 $devicesTable = TableRegistry::get("ReaxiumDevice");
 
-                if(isset($business_id)){
+                if (isset($business_id)) {
 
-                    $deviceFound = $this->getDeviceFilterBusinessWithPaginate($business_id,$filter,$sortedBy,$sortDir);
+                    $deviceFound = $this->getDeviceFilterBusinessWithPaginate($business_id, $filter, $sortedBy, $sortDir);
 
-                }else{
+                } else {
                     if (trim($filter) != '') {
                         $whereCondition = array(array('OR' => array(
+                            array('ReaxiumDevice.device_id' => $filter),
                             array('device_name LIKE' => '%' . $filter . '%'),
                             array('device_description LIKE' => '%' . $filter . '%'),
                             array('device_serial LIKE' => '%' . $filter . '%'))));
@@ -1186,11 +1189,11 @@ class DeviceController extends ReaxiumAPIController
                         $deviceFound = $devicesTable->find()
                             ->where($whereCondition)
                             ->andWhere(array('ReaxiumDevice.status_id' => 1))
-                            ->contain(array("Applications", "Status","Business"))->order(array($sortedBy . ' ' . $sortDir));
+                            ->contain(array("Applications", "Status", "Business"))->order(array($sortedBy . ' ' . $sortDir));
                     } else {
                         $deviceFound = $devicesTable->find()
                             ->where(array('ReaxiumDevice.status_id' => 1))
-                            ->contain(array("Applications", "Status","Business"))->order(array($sortedBy . ' ' . $sortDir));
+                            ->contain(array("Applications", "Status", "Business"))->order(array($sortedBy . ' ' . $sortDir));
                     }
                 }
 
@@ -1246,7 +1249,8 @@ class DeviceController extends ReaxiumAPIController
      * @param $business_id
      * @return array|\Cake\ORM\Query|null
      */
-    private function getDeviceFilterBusinessWithPaginate($business_id,$filter,$sortedBy,$sortDir){
+    private function getDeviceFilterBusinessWithPaginate($business_id, $filter, $sortedBy, $sortDir)
+    {
 
         $deviceTable = TableRegistry::get("ReaxiumDevice");
         $query = $deviceTable->find();
@@ -1265,29 +1269,30 @@ class DeviceController extends ReaxiumAPIController
         $query->hydrate(false);
         $query->join(array(
             'devbusi' => array(
-                'table'=>'device_business',
-                'type'=>'INNER',
-                'conditions'=>'ReaxiumDevice.device_id = devbusi.device_id'
+                'table' => 'device_business',
+                'type' => 'INNER',
+                'conditions' => 'ReaxiumDevice.device_id = devbusi.device_id'
             ),
             'business' => array(
-                'table'=>'business',
-                'type'=>'INNER',
-                'conditions'=>'devbusi.business_id = business.business_id'
+                'table' => 'business',
+                'type' => 'INNER',
+                'conditions' => 'devbusi.business_id = business.business_id'
             )
         ));
 
-        if(trim($filter) != ""){
+        if (trim($filter) != "") {
 
             $whereCondition = array(array('OR' => array(
+                array('ReaxiumDevice.device_id' => $filter),
                 array('ReaxiumDevice.device_name LIKE' => '%' . $filter . '%'),
                 array('ReaxiumDevice.device_description LIKE' => '%' . $filter . '%'),
                 array('ReaxiumDevice.device_serial LIKE' => '%' . $filter . '%'))));
 
             $query->where($whereCondition);
-            $query->andWhere(array('devbusi.business_id'=>$business_id,'ReaxiumDevice.status_id' => 1));
+            $query->andWhere(array('devbusi.business_id' => $business_id, 'ReaxiumDevice.status_id' => 1));
             $query->contain(array("Applications", "Status"))->order(array($sortedBy . ' ' . $sortDir));
-        }else{
-            $query->andWhere(array('devbusi.business_id'=>$business_id,'ReaxiumDevice.status_id' => 1));
+        } else {
+            $query->andWhere(array('devbusi.business_id' => $business_id, 'ReaxiumDevice.status_id' => 1));
             $query->contain(array("Applications", "Status"))->order(array($sortedBy . ' ' . $sortDir));
         }
 
@@ -1379,7 +1384,8 @@ class DeviceController extends ReaxiumAPIController
     }
 
 
-    public function deleteRouteByDevice(){
+    public function deleteRouteByDevice()
+    {
 
         Log::info("deleting  Route relation with device running");
         parent::setResultAsAJson();
@@ -1387,22 +1393,21 @@ class DeviceController extends ReaxiumAPIController
         $jsonObject = parent::getJsonReceived();
         $id_device_route = null;
 
-        try{
-            if(parent::validReaxiumJsonHeader($jsonObject)){
+        try {
+            if (parent::validReaxiumJsonHeader($jsonObject)) {
 
-                $id_device_route = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['id_device_routes'])? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['id_device_routes'];
+                $id_device_route = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['id_device_routes']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['id_device_routes'];
                 $deviceRouteTable = TableRegistry::get('DeviceRoutes');
-                $whereCondition = array('id_device_routes'=>$id_device_route);
+                $whereCondition = array('id_device_routes' => $id_device_route);
                 $deviceRouteTable->deleteAll($whereCondition);
 
                 $response = parent::setSuccessfulDelete($response);
 
 
-            }else{
+            } else {
                 $response = parent::seInvalidParametersMessage($response);
             }
-        }
-        catch(\Exception $e){
+        } catch (\Exception $e) {
             Log::info("Error deleting the route: " . $id_device_route . " error:" . $e->getMessage());
             $response = parent::setInternalServiceError($response);
         }
@@ -1413,18 +1418,19 @@ class DeviceController extends ReaxiumAPIController
     }
 
     //TODO actualizado para resolver parametro business_id
-    public function getUsersByDevice(){
+    public function getUsersByDevice()
+    {
 
         Log::info("getUsersByDevice service");
         parent::setResultAsAJson();
         $response = parent::getDefaultReaxiumMessage();
         $jsonObject = parent::getJsonReceived();
 
-        if(parent::validReaxiumJsonHeader($jsonObject)){
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
 
-            try{
+            try {
 
-                $device_id = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id'])? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id'];
+                $device_id = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id'];
                 $page = $jsonObject['ReaxiumParameters']['ReaxiumDevice']["page"];
                 $sortedBy = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']["sortedBy"]) ? 'first_last_name' : $jsonObject['ReaxiumParameters']['ReaxiumDevice']["sortedBy"];
                 $sortDir = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']["sortDir"]) ? 'desc' : $jsonObject['ReaxiumParameters']['ReaxiumDevice']["sortDir"];
@@ -1433,27 +1439,25 @@ class DeviceController extends ReaxiumAPIController
                 $business_id = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['business_id']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['business_id'];
 
 
-                if(isset($device_id)){
+                if (isset($device_id)) {
 
-                    if(isset($business_id)){
+                    if (isset($business_id)) {
 
-                        $reaxiumDevice = $this->getDeviceFilterBusiness($device_id,$business_id);
-                    }
-                    else{
+                        $reaxiumDevice = $this->getDeviceFilterBusiness($device_id, $business_id);
+                    } else {
                         $reaxiumDevice = $this->getDeviceInfo($device_id);
                     }
 
-                    if(isset($reaxiumDevice)){
+                    if (isset($reaxiumDevice)) {
 
                         if ($reaxiumDevice[0]['status_id'] == 1) {
 
                             if ($reaxiumDevice[0]['configured'] == 1) {
 
-                                if(isset($business_id)){
-                                    $deviceAccessData = $this->getDeviceAccessDataUsersFilterBusiness($device_id,$filter,$sortedBy,$sortDir,$business_id);
-                                }
-                                else{
-                                    $deviceAccessData = $this->getDeviceAccessDataUsers($device_id,$filter,$sortedBy,$sortDir);
+                                if (isset($business_id)) {
+                                    $deviceAccessData = $this->getDeviceAccessDataUsersFilterBusiness($device_id, $filter, $sortedBy, $sortDir, $business_id);
+                                } else {
+                                    $deviceAccessData = $this->getDeviceAccessDataUsers($device_id, $filter, $sortedBy, $sortDir);
                                 }
 
                                 $count = $deviceAccessData->count();
@@ -1461,7 +1465,7 @@ class DeviceController extends ReaxiumAPIController
                                 $deviceAccessFound = $this->paginate($deviceAccessData);
 
 
-                                if($deviceAccessFound->count()>0){
+                                if ($deviceAccessFound->count() > 0) {
 
                                     $maxPages = floor((($count - 1) / $limit) + 1);
                                     $deviceAccessFound = $deviceAccessFound->toArray();
@@ -1469,8 +1473,7 @@ class DeviceController extends ReaxiumAPIController
                                     $response['ReaxiumResponse']['totalPages'] = $maxPages;
                                     $response['ReaxiumResponse']['object'] = $deviceAccessFound;
                                     $response = parent::setSuccessfulResponse($response);
-                                }
-                                else{
+                                } else {
                                     $response['ReaxiumResponse']['code'] = '99';
                                     $response['ReaxiumResponse']['message'] = 'Devices has user relation';
                                 }
@@ -1480,26 +1483,23 @@ class DeviceController extends ReaxiumAPIController
                                 $response['ReaxiumResponse']['message'] = ReaxiumApiMessages::$DEVICE_NOT_CONFIGURED_MESSAGE;
                             }
 
-                        }else{
+                        } else {
                             $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_STATUS_CODE;
                             $response['ReaxiumResponse']['message'] = ReaxiumApiMessages::$INVALID_STATUS_MESSAGE;
                         }
-                    }
-                    else{
+                    } else {
                         $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
                         $response['ReaxiumResponse']['message'] = 'No device found with the id: ' . $device_id;
 
                     }
-                }
-                else{
+                } else {
                     $response = parent::seInvalidParametersMessage($response);
                 }
-            }
-            catch (\Exception $e){
+            } catch (\Exception $e) {
                 Log::info("Error: " . $e->getMessage());
                 $response = parent::setInternalServiceError($response);
             }
-        }else{
+        } else {
             $response = parent::setInvalidJsonMessage($response);
         }
 
@@ -1507,11 +1507,12 @@ class DeviceController extends ReaxiumAPIController
         $this->response->body(json_encode($response));
     }
 
-    private function getDeviceAccessDataUsers($deviceId,$filter,$sortedBy,$sortDir){
+    private function getDeviceAccessDataUsers($deviceId, $filter, $sortedBy, $sortDir)
+    {
 
         $userAccessControlTable = TableRegistry::get("UserAccessControl");
 
-        if($filter != ""){
+        if ($filter != "") {
 
             $whereCondition = array(array('OR' => array(
                 array('first_name LIKE' => '%' . $filter . '%'),
@@ -1536,7 +1537,7 @@ class DeviceController extends ReaxiumAPIController
                 ->contain(array('UserAccessData' => array('AccessType', 'Users' => array('UserType', 'Business', 'Status'))))
                 ->order(array($sortedBy . ' ' . $sortDir));
 
-        }else{
+        } else {
 
             $userAccessControl = $userAccessControlTable->find('All',
                 array('fields' => array('UserAccessData.user_id',
@@ -1550,7 +1551,7 @@ class DeviceController extends ReaxiumAPIController
                     'Users.fingerprint',
                     'Status.status_name',
                     'AccessType.access_type_name')))
-                ->where(array('UserAccessControl.device_id' => $deviceId,'Users.status_id' => '1'))
+                ->where(array('UserAccessControl.device_id' => $deviceId, 'Users.status_id' => '1'))
                 ->contain(array('UserAccessData' => array('AccessType', 'Users' => array('UserType', 'Business', 'Status'))))
                 ->order(array($sortedBy . ' ' . $sortDir));
         }
@@ -1559,11 +1560,12 @@ class DeviceController extends ReaxiumAPIController
     }
 
 
-    private function getDeviceAccessDataUsersFilterBusiness($deviceId,$filter,$sortedBy,$sortDir,$business_id){
+    private function getDeviceAccessDataUsersFilterBusiness($deviceId, $filter, $sortedBy, $sortDir, $business_id)
+    {
 
         $userAccessControlTable = TableRegistry::get("UserAccessControl");
 
-        if($filter != ""){
+        if ($filter != "") {
 
             $whereCondition = array(array('OR' => array(
                 array('first_name LIKE' => '%' . $filter . '%'),
@@ -1584,11 +1586,11 @@ class DeviceController extends ReaxiumAPIController
                     'Status.status_name',
                     'AccessType.access_type_name')))
                 ->where($whereCondition)
-                ->andWhere(array('UserAccessControl.device_id' => $deviceId, 'Users.status_id' => '1','Users.business_id'=>$business_id))
+                ->andWhere(array('UserAccessControl.device_id' => $deviceId, 'Users.status_id' => '1', 'Users.business_id' => $business_id))
                 ->contain(array('UserAccessData' => array('AccessType', 'Users' => array('UserType', 'Business', 'Status'))))
                 ->order(array($sortedBy . ' ' . $sortDir));
 
-        }else{
+        } else {
 
             $userAccessControl = $userAccessControlTable->find('All',
                 array('fields' => array('UserAccessData.user_id',
@@ -1602,7 +1604,7 @@ class DeviceController extends ReaxiumAPIController
                     'Users.fingerprint',
                     'Status.status_name',
                     'AccessType.access_type_name')))
-                ->where(array('UserAccessControl.device_id' => $deviceId,'Users.status_id' => '1','Users.business_id'=>$business_id))
+                ->where(array('UserAccessControl.device_id' => $deviceId, 'Users.status_id' => '1', 'Users.business_id' => $business_id))
                 ->contain(array('UserAccessData' => array('AccessType', 'Users' => array('UserType', 'Business', 'Status'))))
                 ->order(array($sortedBy . ' ' . $sortDir));
         }
@@ -1611,38 +1613,36 @@ class DeviceController extends ReaxiumAPIController
     }
 
 
-
-    public function deleteUserAccessDevice(){
+    public function deleteUserAccessDevice()
+    {
 
         Log::info("deleting  Route relation with device running");
         parent::setResultAsAJson();
         $response = parent::getDefaultReaxiumMessage();
         $jsonObject = parent::getJsonReceived();
 
-        if(parent::validReaxiumJsonHeader($jsonObject)){
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
 
-            try{
+            try {
                 $device_id = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id'];
-                $user_access_data_id = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['user_access_data_id'])? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['user_access_data_id'];
+                $user_access_data_id = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['user_access_data_id']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['user_access_data_id'];
 
-                if(isset($device_id) && isset($user_access_data_id)){
+                if (isset($device_id) && isset($user_access_data_id)) {
                     $userAccessControlTable = TableRegistry::get("UsersAccessControl");
-                    $whereCondition = array('device_id'=>$device_id,'user_access_data_id'=>$user_access_data_id);
+                    $whereCondition = array('device_id' => $device_id, 'user_access_data_id' => $user_access_data_id);
                     $userAccessControlTable->deleteAll($whereCondition);
                     $response = parent::setSuccessfulDelete($response);
 
-                }
-                else{
+                } else {
                     $response = parent::seInvalidParametersMessage($response);
                 }
 
-            }
-            catch (\Exception $e){
+            } catch (\Exception $e) {
                 Log::info("Error deleting the user: " . $user_access_data_id . " error:" . $e->getMessage());
                 $response = parent::setInternalServiceError($response);
             }
 
-        }else{
+        } else {
             $response = parent::seInvalidParametersMessage($response);
         }
 
@@ -1652,7 +1652,8 @@ class DeviceController extends ReaxiumAPIController
     }
 
 
-    public function getBusinessByDevice(){
+    public function getBusinessByDevice()
+    {
 
         Log::info("All Business information the Service invoked");
         parent::setResultAsAJson();
@@ -1660,11 +1661,11 @@ class DeviceController extends ReaxiumAPIController
         $jsonObject = parent::getJsonReceived();
 
 
-        if(parent::validReaxiumJsonHeader($jsonObject)){
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
 
-            try{
+            try {
 
-                $device_id = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id'])? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id'];
+                $device_id = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id'];
                 $page = $jsonObject['ReaxiumParameters']['ReaxiumDevice']["page"];
                 $sortedBy = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']["sortedBy"]) ? 'Business.business_name' : $jsonObject['ReaxiumParameters']['ReaxiumDevice']["sortedBy"];
                 $sortDir = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']["sortDir"]) ? 'desc' : $jsonObject['ReaxiumParameters']['ReaxiumDevice']["sortDir"];
@@ -1672,23 +1673,23 @@ class DeviceController extends ReaxiumAPIController
                 $limit = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']["limit"]) ? 10 : $jsonObject['ReaxiumParameters']['ReaxiumDevice']["limit"];
 
 
-                if(isset($device_id)){
+                if (isset($device_id)) {
 
                     $reaxiumDevice = $this->getDeviceInfo($device_id);
 
-                    if(isset($reaxiumDevice)){
+                    if (isset($reaxiumDevice)) {
 
                         if ($reaxiumDevice[0]['status_id'] == 1) {
 
                             if ($reaxiumDevice[0]['configured'] == 1) {
 
-                                $businessDeviceData = $this->getBusinessDeviceData($device_id,$filter,$sortedBy,$sortDir);
+                                $businessDeviceData = $this->getBusinessDeviceData($device_id, $filter, $sortedBy, $sortDir);
 
                                 $count = $businessDeviceData->count();
                                 $this->paginate = array('limit' => $limit, 'page' => $page);
                                 $businessDeviceFound = $this->paginate($businessDeviceData);
 
-                                if($businessDeviceFound->count()>0){
+                                if ($businessDeviceFound->count() > 0) {
 
                                     $maxPages = floor((($count - 1) / $limit) + 1);
                                     $deviceAccessFound = $businessDeviceFound->toArray();
@@ -1696,38 +1697,32 @@ class DeviceController extends ReaxiumAPIController
                                     $response['ReaxiumResponse']['totalPages'] = $maxPages;
                                     $response['ReaxiumResponse']['object'] = $deviceAccessFound;
                                     $response = parent::setSuccessfulResponse($response);
-                                }
-                                else{
+                                } else {
                                     $response['ReaxiumResponse']['code'] = '99';
                                     $response['ReaxiumResponse']['message'] = 'Devices no has business relation';
                                 }
 
-                            }
-                            else{
+                            } else {
                                 $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$DEVICE_NOT_CONFIGURED_CODE;
                                 $response['ReaxiumResponse']['message'] = ReaxiumApiMessages::$DEVICE_NOT_CONFIGURED_MESSAGE;
                             }
-                        }
-                        else{
+                        } else {
                             $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_STATUS_CODE;
                             $response['ReaxiumResponse']['message'] = ReaxiumApiMessages::$INVALID_STATUS_MESSAGE;
                         }
-                    }
-                    else{
+                    } else {
                         $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
                         $response['ReaxiumResponse']['message'] = 'No device found with the id: ' . $device_id;
                     }
 
-                }
-                else{
+                } else {
                     $response = parent::seInvalidParametersMessage($response);
                 }
-            }
-            catch (\Exception $e){
+            } catch (\Exception $e) {
                 Log::info("Error: " . $e->getMessage());
                 $response = parent::setInternalServiceError($response);
             }
-        }else{
+        } else {
             $response = parent::seInvalidParametersMessage($response);
         }
 
@@ -1736,11 +1731,12 @@ class DeviceController extends ReaxiumAPIController
     }
 
 
-    private function getBusinessDeviceData($deviceId,$filter,$sortedBy,$sortDir){
+    private function getBusinessDeviceData($deviceId, $filter, $sortedBy, $sortDir)
+    {
 
         $businessDeviceTable = TableRegistry::get("DeviceBusiness");
 
-        if(trim($filter) != ""){
+        if (trim($filter) != "") {
 
             $whereCondition = array(array('OR' => array(
                 array('business_name LIKE' => '%' . $filter . '%'),
@@ -1749,13 +1745,13 @@ class DeviceController extends ReaxiumAPIController
 
             $businessDeviceData = $businessDeviceTable->find()
                 ->where($whereCondition)
-                ->andWhere(array('device_id'=>$deviceId))
+                ->andWhere(array('device_id' => $deviceId))
                 ->contain(array('Business'))
                 ->order(array($sortedBy . ' ' . $sortDir));
 
-        }else{
+        } else {
             $businessDeviceData = $businessDeviceTable->find()
-                ->where(array('device_id'=>$deviceId))
+                ->where(array('device_id' => $deviceId))
                 ->contain(array('Business'))
                 ->order(array($sortedBy . ' ' . $sortDir));
         }
@@ -1764,37 +1760,35 @@ class DeviceController extends ReaxiumAPIController
     }
 
 
-    public function deleteBusinessDevice(){
+    public function deleteBusinessDevice()
+    {
 
         Log::info("All delete business of device the Service invoked");
         parent::setResultAsAJson();
         $response = parent::getDefaultReaxiumMessage();
         $jsonObject = parent::getJsonReceived();
 
-        if(parent::validReaxiumJsonHeader($jsonObject)){
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
 
-            try{
+            try {
 
                 $deviceId = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id'];
                 $businessId = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['business_id']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['business_id'];
 
-                if(isset($deviceId) && isset($businessId)){
+                if (isset($deviceId) && isset($businessId)) {
 
                     $businessDeviceTable = TableRegistry::get("DeviceBusiness");
-                    $whereCondition = array(array('device_id' =>$deviceId,'business_id'=>$businessId));
+                    $whereCondition = array(array('device_id' => $deviceId, 'business_id' => $businessId));
                     $businessDeviceTable->deleteAll($whereCondition);
                     $response = parent::setSuccessfulDelete($response);
-                }
-                else{
+                } else {
                     $response = parent::setInvalidJsonMessage($response);
                 }
-            }
-            catch(\Exception $e){
+            } catch (\Exception $e) {
                 Log::info("Error: " . $e->getMessage());
                 $response = parent::setInternalServiceError($response);
             }
-        }
-        else{
+        } else {
             $response = parent::setInvalidJsonMessage($response);
         }
 
@@ -1845,7 +1839,8 @@ class DeviceController extends ReaxiumAPIController
      *
      */
 
-    public function createDevice(){
+    public function createDevice()
+    {
 
         Log::info("Create a new Device service has been invoked");
         parent::setResultAsAJson();
@@ -1874,63 +1869,59 @@ class DeviceController extends ReaxiumAPIController
 
                 if (isset($device_name) && isset($device_desc) && isset($business) && isset($device_serial)) {
 
-                    $deviceTable  = TableRegistry::get('ReaxiumDevice');
+                    $deviceTable = TableRegistry::get('ReaxiumDevice');
                     $deviceRelBusinessTable = TableRegistry::get('DeviceBusiness');
 
                     //creas un device nuevo
 
-                    if($device_id == null){
+                    if ($device_id == null) {
 
                         Log::info('Creacion Nuevo dispositivo');
 
-                        $validateSerial = $this->checkExitsSerialDevice($device_serial,$deviceTable);
+                        $validateSerial = $this->checkExitsSerialDevice($device_serial, $deviceTable);
 
-                        if($validateSerial){
+                        if ($validateSerial) {
 
-                            $result = $this->createANewDevice($device_name,$device_desc,$device_serial,$deviceTable);
+                            $result = $this->createANewDevice($device_name, $device_desc, $device_serial, $deviceTable);
                             Log::info('Resultado: ' . $result);
 
                             if (isset($result)) {
 
-                                $relationResult = $this->DeviceRelationShipBusiness($result['device_id'],$business,$deviceRelBusinessTable);
+                                $relationResult = $this->DeviceRelationShipBusiness($result['device_id'], $business, $deviceRelBusinessTable);
 
-                                if($relationResult){
+                                if ($relationResult) {
                                     $response = parent::setSuccessfulSave($response);
                                     $response['ReaxiumResponse']['object'] = $result;
-                                }
-                                else{
+                                } else {
                                     $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$CANNOT_SAVE;
                                     $response['ReaxiumResponse']['message'] = 'There was a problem trying to save the device, please try later';
                                 }
-                            }
-                            else {
+                            } else {
                                 $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$CANNOT_SAVE;
                                 $response['ReaxiumResponse']['message'] = 'There was a problem trying to save the device, please try later';
                             }
-                        }
-                        else{
+                        } else {
                             $response['ReaxiumResponse']['code'] = "1";
-                            $response['ReaxiumResponse']['message'] = 'The serial '. $device_serial .' device is already registered in the system';
+                            $response['ReaxiumResponse']['message'] = 'The serial ' . $device_serial . ' device is already registered in the system';
                         }
 
 
-                    }else{
+                    } else {
                         /*delete business and create now*/
                         Log::info("Mode edition");
-                        $deviceRelBusinessTable->deleteAll(array('device_id'=>$device_id));
+                        $deviceRelBusinessTable->deleteAll(array('device_id' => $device_id));
 
-                        $relationResult = $this->DeviceRelationShipBusiness($device_id,$business,$deviceRelBusinessTable);
+                        $relationResult = $this->DeviceRelationShipBusiness($device_id, $business, $deviceRelBusinessTable);
 
-                        if($relationResult){
+                        if ($relationResult) {
                             $response = parent::setSuccessfulSave($response);
                             $response['ReaxiumResponse']['object'] = $relationResult;
-                        }else{
+                        } else {
                             $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$CANNOT_SAVE;
                             $response['ReaxiumResponse']['message'] = 'There was a problem trying to save the device, please try later';
                         }
                     }
-                }
-                else {
+                } else {
                     $response = parent::seInvalidParametersMessage($response);
                 }
             } catch (\Exception $e) {
@@ -1949,12 +1940,13 @@ class DeviceController extends ReaxiumAPIController
      * @param $reaxiumDeviceTable
      * @return bool
      */
-    private function checkExitsSerialDevice($serial_number,$reaxiumDeviceTable){
+    private function checkExitsSerialDevice($serial_number, $reaxiumDeviceTable)
+    {
 
         $validate = true;
         $reaxiumDeviceFound = $reaxiumDeviceTable->findByDeviceSerial($serial_number);
 
-        if($reaxiumDeviceFound->count() > 0) {
+        if ($reaxiumDeviceFound->count() > 0) {
             $validate = false;
         }
 
@@ -1967,7 +1959,8 @@ class DeviceController extends ReaxiumAPIController
      * @param $deviceTable
      * @return mixed
      */
-    private function createANewDevice($device_name,$device_desc,$device_serial,$deviceTable){
+    private function createANewDevice($device_name, $device_desc, $device_serial, $deviceTable)
+    {
 
         $device = $deviceTable->newEntity();
         $device->device_name = $device_name;
@@ -1985,20 +1978,21 @@ class DeviceController extends ReaxiumAPIController
      * @param $deviceRelBussiTable
      * @return bool
      */
-    private function DeviceRelationShipBusiness($deviceId,$businessArray,$deviceRelBussiTable){
+    private function DeviceRelationShipBusiness($deviceId, $businessArray, $deviceRelBussiTable)
+    {
 
         $arrayDeviceRelationBusiness = [];
         $validate = true;
 
-        foreach($businessArray as $business){
-            array_push($arrayDeviceRelationBusiness,array('device_id'=>$deviceId,'business_id'=>$business['business_id']));
+        foreach ($businessArray as $business) {
+            array_push($arrayDeviceRelationBusiness, array('device_id' => $deviceId, 'business_id' => $business['business_id']));
         }
 
         $deviceRelBusinessData = $deviceRelBussiTable->newEntities($arrayDeviceRelationBusiness);
 
-        foreach($deviceRelBusinessData as $entity){
+        foreach ($deviceRelBusinessData as $entity) {
 
-            if(!$deviceRelBussiTable->save($entity)){
+            if (!$deviceRelBussiTable->save($entity)) {
                 $validate = false;
                 break;
             }
