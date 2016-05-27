@@ -297,22 +297,10 @@ class StopsController extends ReaxiumAPIController
             if (isset($arrayObj)) {
 
                 try {
+
                     $stopTable = TableRegistry::get("Stops");
 
-                    foreach ($arrayObj as $entity) {
-
-                        $stopData = $stopTable->newEntity();
-                        $stopData->stop_number = $entity['stop_number'];
-                        $stopData->stop_name = $entity['stop_name'];
-                        $stopData->stop_latitude = $entity['stop_latitude'];
-                        $stopData->stop_longitude = $entity['stop_longitude'];
-                        $stopData->stop_address = $entity['stop_address'];
-
-                        if (!$stopTable->save($stopData)) {
-                            $validate = false;
-                            break;
-                        }
-                    }
+                    $validate = $this->createStopsTransactional($stopTable,$arrayObj);
 
                     if ($validate) {
                         $response = parent::setSuccessfulResponse($response);
@@ -335,6 +323,41 @@ class StopsController extends ReaxiumAPIController
         $this->response->body(json_encode($response));
     }
 
+    /***
+     * Method transacctional create stops
+     * @param $stopTable
+     * @param $arrayObj
+     * @return bool
+     */
+    private function createStopsTransactional($stopTable,$arrayObj){
+
+        $validate = true;
+
+        try{
+
+            $conn = $stopTable->connection();
+
+            $conn->transactional(function() use($stopTable,$arrayObj){
+
+                foreach ($arrayObj as $entity) {
+
+                    $stopData = $stopTable->newEntity();
+                    $stopData->stop_number = $entity['stop_number'];
+                    $stopData->stop_name = $entity['stop_name'];
+                    $stopData->stop_latitude = $entity['stop_latitude'];
+                    $stopData->stop_longitude = $entity['stop_longitude'];
+                    $stopData->stop_address = $entity['stop_address'];
+                    $stopTable->save($stopData);
+                }
+            });
+        }
+        catch (\Exception $e){
+            Log::info("Error guardando las paradas" .$e->getMessage());
+            $validate = false;
+        }
+
+        return $validate;
+    }
 
     /**
      * @api {post} /Stops/associationStopAndUser create stops
