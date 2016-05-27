@@ -450,5 +450,25 @@ class TrafficController extends ReaxiumAPIController
         return $trafficFound;
     }
 
+    /**
+     * get the last traffic of a user
+     * @param $userId
+     * @return array
+     */
+    public function getLastTrafficOfAUser($userId)
+    {
+        $response = array('userInABus' => false, 'object' => null);
+        $trafficTable = TableRegistry::get("Traffic");
+        $lastAccess = $trafficTable->find('first', array('conditions' => array('user_id' => $userId), 'order' => array('datetime' => 'DESC')));
+        if ($lastAccess->count() > 0) {
+            $lastAccess = $lastAccess->toArray();
+            if ($lastAccess[0]['traffic_type_id'] == 1) {
+                $response['userInABus'] = true;
+                $response['object'] = $lastAccess;
+            }
+        }
+        return $response;
+    }
+
 
 }

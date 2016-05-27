@@ -456,6 +456,7 @@ class UsersController extends ReaxiumAPIController
 
                             $userFound[0]['Stakeholders'] = $this->getStakeHolders($userFound[0]['user_id']);
                             if ($userFound[0]['user_type_id'] == 3) {
+                                $userFound[0]['stakeholder_id'] = $this->getStakeHolderId($userFound[0]['user_id']);
                                 $userFound[0]['UserRelationship'] = $this->getUserRelationshipByUserID($userFound[0]['user_id']);
                             }
 
@@ -511,7 +512,7 @@ class UsersController extends ReaxiumAPIController
         if ($user->count() > 0) {
             $user = $user->toArray();
             if ($user[0]['user_type_id'] == 3) {
-                $user[0]['UserRelationship'] = $this->getUserRelationshipByUserID($userFound[0]['user_id']);
+                $user[0]['UserRelationship'] = $this->getUserRelationshipByUserID($user[0]['user_id']);
             }
             $user[0]['stakeholders'] = $this->getStakeHolders($userId);
         } else {
@@ -540,6 +541,18 @@ class UsersController extends ReaxiumAPIController
             }
         }
         return $stakeholderInfoArray;
+    }
+
+    private function getStakeHolderId($userId)
+    {
+        $stakeholderId  = null;
+        $stakeholderTable = TableRegistry::get("Stakeholders");
+        $stakeholder = $stakeholderTable->findByUserId($userId);
+        if ($stakeholder->count() > 0){
+            $stakeholder = $stakeholder->toArray();
+            $stakeholderId = $stakeholder[0]['stakeholder_id'];
+        }
+        return $stakeholderId;
     }
 
     /**
