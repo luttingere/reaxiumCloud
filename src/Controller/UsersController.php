@@ -243,10 +243,12 @@ class UsersController extends ReaxiumAPIController
      */
     private function createUserStakeholder($userJSON)
     {
+        $userRelationShipTable = TableRegistry::get("UsersRelationship");
         $userStakeHolderData = $this->createAUser($userJSON);
         $stakeholderId = null;
         if(isset($userJSON['Users']['stakeholder_id'])){
             $stakeholderId = $userJSON['Users']['stakeholder_id'];
+            $userRelationShipTable->deleteAll(array('stakeholder_id'=>$stakeholderId));
         }
         $resultRelationship = array();
         if (!isset($stakeholderId)) {
@@ -257,7 +259,7 @@ class UsersController extends ReaxiumAPIController
             $stakeholderId = $stakeholderId->stakeholder_id;
         }
         $userRelationShip = $userJSON['Relationship'];
-        $userRelationShipTable = TableRegistry::get("UsersRelationship");
+
         foreach ($userRelationShip as $relationship) {
             $relationshipObject = $userRelationShipTable->newEntity();
             $relationshipObject->stakeholder_id = $stakeholderId;
