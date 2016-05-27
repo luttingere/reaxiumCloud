@@ -233,6 +233,7 @@ class UsersController extends ReaxiumAPIController
         Log::info('UserId: ' . $userId);
         $result['PhoneNumbers'] = $this->addPhoneToAUser($userJSON['PhoneNumbers'], $userId);
         $result['Address'] = $this->addAddressToAUser($userJSON['address'], $userId);
+
         return $result;
     }
 
@@ -243,7 +244,10 @@ class UsersController extends ReaxiumAPIController
     private function createUserStakeholder($userJSON)
     {
         $userStakeHolderData = $this->createAUser($userJSON);
-        $stakeholderId = $userStakeHolderData['stakeholder_id'];
+        $stakeholderId = null;
+        if(isset($userJSON['Users']['stakeholder_id'])){
+            $stakeholderId = $userJSON['Users']['stakeholder_id'];
+        }
         $resultRelationship = array();
         if (!isset($stakeholderId)) {
             $stakeholderTable = TableRegistry::get("Stakeholders");
