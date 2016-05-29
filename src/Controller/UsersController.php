@@ -987,6 +987,9 @@ class UsersController extends ReaxiumAPIController
     {
         $this->loadModel("Users");
         $this->Users->updateAll(array('status_id' => '3'), array('user_id' => $userId));
+
+        $this->loadModel("UserAccessData");
+        $this->UserAccessData->updateAll(array('status_id' => '3'), array('user_id' => $userId));
     }
 
 
