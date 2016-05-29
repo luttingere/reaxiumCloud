@@ -634,8 +634,14 @@ class RoutesController extends ReaxiumAPIController
             $stop_object = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["stops"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["stops"];
             $id_route = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["id_route"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["id_route"];
             $route_type = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_type_id"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_type_id"];
+            $overview_polyline = !isset($jsonObject['ReaxiumParameters']['ReaxiumRoutes']['overview_polyline']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumRoutes']['overview_polyline'];
 
-            if (isset($route_name) && isset($route_number) && isset($route_address) && isset($stop_object) && isset($route_type)) {
+            if (isset($route_name) &&
+                isset($route_number) &&
+                isset($route_address) &&
+                isset($stop_object) &&
+                isset($route_type) &&
+                isset($overview_polyline)) {
 
                 try {
 
@@ -651,9 +657,9 @@ class RoutesController extends ReaxiumAPIController
                         $routeData->route_name = $route_name;
                         $routeData->route_address = $route_address;
                         $routeData->route_type = $route_type;
+                        $routeData->overview_polyline = $overview_polyline;
 
                         $validate = $this->createRoutesTransactional($routeDataTable, $routeData, $routeByStopsTable,$stop_object);
-
 
                         if ($validate) {
 
@@ -677,7 +683,7 @@ class RoutesController extends ReaxiumAPIController
 
                         $routeByStopsData = $routeByStopsTable->newEntities($arrayRoutesRelationStops);
 
-                        $validate = $this->editRoutesTransactional($routeByStopsTable,$routeByStopsData,$routeDataTable,$id_route);
+                        $validate = $this->editRoutesTransactional($routeByStopsTable,$routeByStopsData,$routeDataTable,$id_route,$overview_polyline);
 
                         if ($validate) {
                             $response = parent::setSuccessfulResponse($response);
@@ -755,14 +761,14 @@ class RoutesController extends ReaxiumAPIController
      * @param $id_route
      * @return bool
      */
-        private function editRoutesTransactional($routeByStopsTable,$entityRouteByStops,$routeDataTable,$id_route){
+        private function editRoutesTransactional($routeByStopsTable,$entityRouteByStops,$routeDataTable,$id_route,$overViewPolyline){
 
             $validate = true;
 
             try{
                 $conn = $routeDataTable->connection();
 
-                $conn->transactional(function() use($routeByStopsTable,$routeDataTable,$entityRouteByStops,$id_route){
+                $conn->transactional(function() use($routeByStopsTable,$routeDataTable,$entityRouteByStops,$id_route,$overViewPolyline){
 
                     $routeByStopsTable->deleteAll(["id_route" => $id_route]);
                     $cont_stops_save = 0;
@@ -773,6 +779,9 @@ class RoutesController extends ReaxiumAPIController
                     }
 
                     $routeDataTable->updateAll(array("routes_stops_count" => $cont_stops_save), array("id_route" => $id_route));
+                    $routeDataTable->updateAll(array("overview_polyline" => $overViewPolyline), array("id_route" => $id_route));
+
+
                 });
 
             }catch(\Exception $e){
