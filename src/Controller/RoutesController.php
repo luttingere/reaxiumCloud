@@ -195,7 +195,6 @@ class RoutesController extends ReaxiumAPIController
             ->order(array($sortedBy . ' ' . $sortDir));
 
 
-
         $routeStopUserObject = array('routes' => array());
 
         if ($deviceRouteFound->count() > 0) {
@@ -206,14 +205,16 @@ class RoutesController extends ReaxiumAPIController
 
             foreach ($deviceRouteFound as $route) {
 
-               $routesArray = array('id_route' => $route['route']['id_route'],
+                $routesArray = array('id_route' => $route['route']['id_route'],
                     'route_number' => $route['route']['route_number'],
                     'route_type' => $route['route']['route_type'],
                     'route_name' => $route['route']['route_name'],
                     'route_address' => $route['route']['route_address'],
+                    'route_type' => $route['route']['route_type'],
+                    'overview_polyline' => $route['route']['overview_polyline'],
                     'routes_stops_count' => $route['route']['routes_stops_count'],
-                    'route_start_date'=>$route['start_date'],
-                    'route_end_date'=>$route['end_date'],
+                    'route_start_date' => $route['start_date'],
+                    'route_end_date' => $route['end_date'],
                     'stops' => array());
 
 
@@ -228,7 +229,7 @@ class RoutesController extends ReaxiumAPIController
                             'stop_latitude' => $stop['stop_latitude'],
                             'stop_longitude' => $stop['stop_longitude'],
                             'stop_address' => $stop['stop_address'],
-                            'users' =>  $stopController->getUserInTheStop($stop['id_stop']));
+                            'users' => $stopController->getUserInTheStop($stop['id_stop']));
 
                         array_push($routesArray['stops'], $stopArray);
                     }
@@ -632,7 +633,7 @@ class RoutesController extends ReaxiumAPIController
             $route_number = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_number"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_number"];
             $route_address = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_address"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_address"];
             $stop_object = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["stops"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["stops"];
-            $id_route = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["id_route"]) ? null: $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["id_route"];
+            $id_route = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["id_route"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["id_route"];
 //            $route_type = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_type_id"]) ? null: $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_type_id"];
 
             if (isset($route_name) && isset($route_number) && isset($route_address) && isset($stop_object)) {
@@ -653,11 +654,11 @@ class RoutesController extends ReaxiumAPIController
 //                        $routeData->route_type = $route_type;
                         $routeData = $routeDataTable->save($routeData);
 
-                        if(isset($routeData)){
+                        if (isset($routeData)) {
 
-                            foreach($stop_object as $obj){
+                            foreach ($stop_object as $obj) {
 //                                array_push($arrayRoutesRelationStops,["id_route"=>$routeData["id_route"],"id_stop"=>$obj["id_stop"],"order_stop"=>$obj["order_stop"]]);
-                                array_push($arrayRoutesRelationStops,["id_route"=>$routeData["id_route"],"id_stop"=>$obj["id_stop"]]);
+                                array_push($arrayRoutesRelationStops, ["id_route" => $routeData["id_route"], "id_stop" => $obj["id_stop"]]);
                             }
 
                             $routeByStopsTable = TableRegistry::get("RoutesStopsRelationship");
@@ -677,7 +678,7 @@ class RoutesController extends ReaxiumAPIController
 
                             $routeDataTable->updateAll(array("routes_stops_count" => $cont_stops_save), array("id_route" => $routeData["id_route"]));
 
-                            if($validate){
+                            if ($validate) {
 
                                 Log::info("ruta creada con exito...");
                                 Log::info(json_encode($arrayRoutesRelationStops));
@@ -746,7 +747,9 @@ class RoutesController extends ReaxiumAPIController
     }
 
 
-    private function createRoutesTransactional($conn,$entityRoute,$routeDataTable){}
+    private function createRoutesTransactional($conn, $entityRoute, $routeDataTable)
+    {
+    }
 
 
 //TODO nuevo servicio pendiente documentacion
