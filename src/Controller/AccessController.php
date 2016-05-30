@@ -14,7 +14,9 @@ use Cake\Log\Log;
 use Cake\ORM\TableRegistry;
 use Cake\Utility\Security;
 
-
+define('TYPE_ACCESS_LOGIN',1);
+define('TYPE_ACCESS_BIOMETRIC',2);
+define('TYPE_RFID',3);
 class AccessController extends ReaxiumAPIController
 {
 
@@ -1127,4 +1129,115 @@ class AccessController extends ReaxiumAPIController
         $this->response->body(json_encode($response));
     }
 
+
+    public function getAllAccessUsersInfo(){
+
+        Log::info("get info access user Service invoked");
+
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+
+        if(parent::validReaxiumJsonHeader($jsonObject)){
+
+            try{
+
+                $arrayResponse = [];
+
+                $user_id = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['user_id']) ? null
+                    : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['user_id'];
+
+                $device_id = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id']) ? null
+                    : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id'];
+
+                if(isset($user_id) && isset($device_id)){
+
+                    $userAccessDataTable = TableRegistry::get("UserAccessData");
+                    $userAccessData = $userAccessDataTable->find('all',array('fields'=>array('UserAccessData.access_type_id',
+                        'UserAccessData.user_id',
+                        'UserAccessData.user_access_data_id',
+                        'UserAccessData.user_login_name',
+                        'UserAccessData.user_password',
+                        'UserAccessData.rfid_code',
+                        'UserAccessData.biometric_code')))
+                        ->where(array('UserAccessData.user_id'=>$user_id));
+
+                    if ($userAccessData->count() > 0) {
+                        $userAccessData = $userAccessData->toArray();
+                    } else {
+                        $userAccessData = null;
+                    }
+
+                    if(isset($userAccessData)){
+
+                        foreach($userAccessData as $access){
+
+                            $userAccessDataObj = $userAccessDataTable->newEntity();
+
+                            if($access['access_type_id'] == TYPE_ACCESS_LOGIN){
+
+                                $userAccessDataObj->access_type_id = $access['access_type_id'];
+                                $userAccessDataObj->user_id = $access['user_id'];
+                                $configured = $this->findAccessDevice($device_id,$access['user_access_data_id']);
+                                $userAccessDataObj->configured =$configured;
+
+                            }
+                            else if($access['access_type_id'] == TYPE_ACCESS_BIOMETRIC){
+
+                                $userAccessDataObj->access_type_id = $access['access_type_id'];
+                                $userAccessDataObj->user_id = $access['user_id'];
+                                $configured = $this->findAccessDevice($device_id,$access['user_access_data_id']);
+                                $userAccessDataObj->configured =$configured;
+                            }else{
+                                $userAccessDataObj->access_type_id = $access['access_type_id'];
+                                $userAccessDataObj->user_id = $access['user_id'];
+                                $configured = $this->findAccessDevice($device_id,$access['user_access_data_id']);
+                                $userAccessDataObj->configured =$configured;
+                            }
+
+                            array_push($arrayResponse,$userAccessDataObj);
+                        }
+
+                        $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$SUCCESS_CODE;
+                        $response['ReaxiumResponse']['message'] = ReaxiumApiMessages::$SUCCESS_MESSAGE;
+                        $response['ReaxiumResponse']['object'] = $arrayResponse;
+
+                    }else{
+                        $response['ReaxiumResponse']['code'] = '1';
+                        $response['ReaxiumResponse']['message'] = 'User does not have any access to the system';
+                        $response['ReaxiumResponse']['object'] = [];
+                    }
+
+                }else{
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+
+            }
+            catch(\Exception $e){
+                Log::info($e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+        }
+        else{
+            $response = parent::seInvalidParametersMessage($response);
+        }
+
+        Log::info(json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
+
+    private function findAccessDevice($device_id,$user_access_data_id){
+
+        $configure = true;
+        $userAccessTable = TableRegistry::get("UserAccessControl");
+
+        $userAccess = $userAccessTable->findByDeviceIdAndUserAccessDataId($device_id,$user_access_data_id);
+
+        if(!$userAccess->count()> 0){
+            $configure = false;
+        }
+
+        return $configure;
+    }
 }

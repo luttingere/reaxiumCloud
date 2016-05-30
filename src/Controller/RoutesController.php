@@ -634,14 +634,20 @@ class RoutesController extends ReaxiumAPIController
             $route_address = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_address"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_address"];
             $stop_object = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["stops"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["stops"];
             $id_route = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["id_route"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["id_route"];
-//            $route_type = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_type_id"]) ? null: $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_type_id"];
+            $route_type = !isset($jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_type_id"]) ? null : $jsonObject["ReaxiumParameters"]["ReaxiumRoutes"]["route_type_id"];
+            $overview_polyline = !isset($jsonObject['ReaxiumParameters']['ReaxiumRoutes']['overview_polyline']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumRoutes']['overview_polyline'];
 
-            if (isset($route_name) && isset($route_number) && isset($route_address) && isset($stop_object)) {
+            if (isset($route_name) &&
+                isset($route_number) &&
+                isset($route_address) &&
+                isset($stop_object) &&
+                isset($route_type) &&
+                isset($overview_polyline)) {
 
                 try {
+
                     $routeDataTable = TableRegistry::get("Routes");
-                    $arrayRoutesRelationStops = [];
-                    $validate = true;
+                    $routeByStopsTable = TableRegistry::get("RoutesStopsRelationship");
 
                     if ($id_route == null) {
 
@@ -651,82 +657,39 @@ class RoutesController extends ReaxiumAPIController
                         $routeData->route_number = $route_number;
                         $routeData->route_name = $route_name;
                         $routeData->route_address = $route_address;
-//                        $routeData->route_type = $route_type;
-                        $routeData = $routeDataTable->save($routeData);
+                        $routeData->route_type = $route_type;
+                        $routeData->overview_polyline = $overview_polyline;
 
-                        if (isset($routeData)) {
+                        $validate = $this->createRoutesTransactional($routeDataTable, $routeData, $routeByStopsTable,$stop_object);
 
-                            foreach ($stop_object as $obj) {
-//                                array_push($arrayRoutesRelationStops,["id_route"=>$routeData["id_route"],"id_stop"=>$obj["id_stop"],"order_stop"=>$obj["order_stop"]]);
-                                array_push($arrayRoutesRelationStops, ["id_route" => $routeData["id_route"], "id_stop" => $obj["id_stop"]]);
-                            }
+                        if ($validate) {
 
-                            $routeByStopsTable = TableRegistry::get("RoutesStopsRelationship");
-                            $routeByStopsData = $routeByStopsTable->newEntities($arrayRoutesRelationStops);
-
-                            $cont_stops_save = 0;
-
-                            foreach ($routeByStopsData as $entity) {
-
-                                if (!$routeByStopsTable->save($entity)) {
-                                    $validate = false;
-                                    break;
-                                } else {
-                                    $cont_stops_save++;
-                                }
-                            }
-
-                            $routeDataTable->updateAll(array("routes_stops_count" => $cont_stops_save), array("id_route" => $routeData["id_route"]));
-
-                            if ($validate) {
-
-                                Log::info("ruta creada con exito...");
-                                Log::info(json_encode($arrayRoutesRelationStops));
-                                $response = parent::setSuccessfulResponse($response);
-
-                            } else {
-                                Log::info('Error insertando elemento en tabla users_access_control');
-                                $response = parent::setInternalServiceError($response);
-                            }
+                            Log::info("ruta creada con exito...");
+                            $response = parent::setSuccessfulResponse($response);
 
                         } else {
-                            Log::info("Ruta no pudo se creada");
                             $response = parent::setInternalServiceError($response);
                         }
+
                     } else {
                         //si existe se borran las paradas asociadas
 
                         Log::info("Mode editar rutas");
 
-                        $routeByStopsTable = TableRegistry::get("RoutesStopsRelationship");
-                        $routeByStopsTable->deleteAll(["id_route" => $id_route]);
+                        $arrayRoutesRelationStops = [];
 
                         foreach ($stop_object as $obj) {
-                            array_push($arrayRoutesRelationStops, ["id_route" => $id_route, "id_stop" => $obj["id_stop"]]);
+                            array_push($arrayRoutesRelationStops, ["id_route" => $id_route, "id_stop" => $obj["id_stop"],"order_stop" => $obj["order_stop"]]);
                         }
 
                         $routeByStopsData = $routeByStopsTable->newEntities($arrayRoutesRelationStops);
 
-                        $cont_stops_save = 0;
-
-                        foreach ($routeByStopsData as $entity) {
-
-                            if (!$routeByStopsTable->save($entity)) {
-                                $validate = false;
-                                break;
-                            } else {
-                                $cont_stops_save++;
-                            }
-                        }
-
-                        $routeDataTable->updateAll(array("routes_stops_count" => $cont_stops_save), array("id_route" => $id_route));
+                        $validate = $this->editRoutesTransactional($routeByStopsTable,$routeByStopsData,$routeDataTable,$id_route,$overview_polyline);
 
                         if ($validate) {
-                            Log::info(json_encode($arrayRoutesRelationStops));
                             $response = parent::setSuccessfulResponse($response);
 
                         } else {
-                            Log::info('Error insertando elemento en tabla users_access_control');
                             $response = parent::setInternalServiceError($response);
                         }
                     }
@@ -746,10 +709,90 @@ class RoutesController extends ReaxiumAPIController
         $this->response->body(json_encode($response));
     }
 
+    /**
+     * @param $entityRoute
+     * @param $routeDataTable
+     * @param $entityRelationRouteStops
+     * @param $routeByStopsTable
+     * @return bool
+     */
+        private function createRoutesTransactional($routeDataTable, $entityRoute, $routeByStopsTable,$arrayStops){
 
-    private function createRoutesTransactional($conn, $entityRoute, $routeDataTable)
-    {
+        $validate = true;
+
+
+        try {
+            $conn = $routeDataTable->connection();
+
+            $conn->transactional(function () use ($routeDataTable, $entityRoute, $routeByStopsTable,$arrayStops) {
+
+                $arrayRoutesRelationStops = [];
+
+                //crear ruta
+                $routeData = $routeDataTable->save($entityRoute);
+
+                foreach ($arrayStops as $obj) {
+                    array_push($arrayRoutesRelationStops, ["id_route" => $routeData["id_route"], "id_stop" => $obj["id_stop"], "order_stop" => $obj["order_stop"]]);
+                }
+
+                $routeByStopsData = $routeByStopsTable->newEntities($arrayRoutesRelationStops);
+
+                $cont_stops_save = 0;
+
+                foreach ($routeByStopsData as $entity) {
+                    $routeByStopsTable->save($entity);
+                    $cont_stops_save++;
+                }
+
+                $routeDataTable->updateAll(array("routes_stops_count" => $cont_stops_save), array("id_route" => $routeData["id_route"]));
+
+            });
+
+        } catch (\Exception $e) {
+            Log::info('Error create route in system:' . $e->getMessage());
+            $validate = false;
+        }
+
+        return $validate;
     }
+
+    /**
+     * @param $routeByStopsTable
+     * @param $routeDataTable
+     * @param $id_route
+     * @return bool
+     */
+        private function editRoutesTransactional($routeByStopsTable,$entityRouteByStops,$routeDataTable,$id_route,$overViewPolyline){
+
+            $validate = true;
+
+            try{
+                $conn = $routeDataTable->connection();
+
+                $conn->transactional(function() use($routeByStopsTable,$routeDataTable,$entityRouteByStops,$id_route,$overViewPolyline){
+
+                    $routeByStopsTable->deleteAll(["id_route" => $id_route]);
+                    $cont_stops_save = 0;
+
+                    foreach ($entityRouteByStops as $entity) {
+                        $routeByStopsTable->save($entity);
+                        $cont_stops_save++;
+                    }
+
+                    $routeDataTable->updateAll(array("routes_stops_count" => $cont_stops_save), array("id_route" => $id_route));
+                    $routeDataTable->updateAll(array("overview_polyline" => $overViewPolyline), array("id_route" => $id_route));
+
+
+                });
+
+            }catch(\Exception $e){
+                Log::info('Error create route in system:' . $e->getMessage());
+                $validate = false;
+            }
+
+            return $validate;
+        }
+
 
 
 //TODO nuevo servicio pendiente documentacion
