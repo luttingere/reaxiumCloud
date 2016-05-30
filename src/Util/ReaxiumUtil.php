@@ -3,7 +3,9 @@ namespace App\Util;
 
 use Cake\I18n\Time;
 use Cake\Log\Log;
-define('TIME_ZONE', 'America/Caracas');
+define('TIME_ZONE', 'America/New_York');
+use DateTime;
+use DateInterval;
 /**
  * Created by PhpStorm.
  * User: Eduardo Luttinger
@@ -37,6 +39,15 @@ class ReaxiumUtil
         $time->setTimezone(TIME_ZONE);
         $dateAssigned = $time->i18nFormat('YYYY-MM-dd HH:mm:ss');
         return $dateAssigned;
+    }
+
+    public static function getSystemDateMinusTime($timeToAdd, $unit){
+        $time = Time::now();
+        $time->setTimezone(TIME_ZONE);
+        $time = new DateTime($time->i18nFormat('YYYY-MM-dd HH:mm:ss'));
+        $time->sub(new DateInterval('PT' . $timeToAdd . $unit));
+        $dateToReturn =$time->format('Y-m-d H:i:s');
+        return $dateToReturn;
     }
 
 

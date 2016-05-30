@@ -95,21 +95,23 @@ class AndroidPushController extends AppController {
      * @param $arrayOfAndroidMessages
      */
     public static function sendBulkPush($arrayOfAndroidMessages){
-        if(sizeof($arrayOfAndroidMessages) > 0){
-            $httpCall = curl_init();
-            curl_setopt( $httpCall,CURLOPT_URL, AndroidPushController::$googleCloudMessaginServerUrl);
-            curl_setopt( $httpCall,CURLOPT_POST, true );
-            curl_setopt( $httpCall,CURLOPT_HTTPHEADER, AndroidPushController::$httpAndroidPushHeader);
-            curl_setopt( $httpCall,CURLOPT_RETURNTRANSFER, true );
-            curl_setopt( $httpCall,CURLOPT_SSL_VERIFYPEER, false );
-            foreach($arrayOfAndroidMessages as $messages){
-                $dataToSend = AndroidPushController::getPushData($messages['deviceId'],AndroidPushController::loadSimpleMessage($messages['message']));
-                Log::info($dataToSend);
-                curl_setopt( $httpCall,CURLOPT_POSTFIELDS, $dataToSend);
-                $result = curl_exec($httpCall);
-                Log::info($result);
+        if($arrayOfAndroidMessages != null){
+            if(sizeof($arrayOfAndroidMessages) > 0){
+                $httpCall = curl_init();
+                curl_setopt( $httpCall,CURLOPT_URL, AndroidPushController::$googleCloudMessaginServerUrl);
+                curl_setopt( $httpCall,CURLOPT_POST, true );
+                curl_setopt( $httpCall,CURLOPT_HTTPHEADER, AndroidPushController::$httpAndroidPushHeader);
+                curl_setopt( $httpCall,CURLOPT_RETURNTRANSFER, true );
+                curl_setopt( $httpCall,CURLOPT_SSL_VERIFYPEER, false );
+                foreach($arrayOfAndroidMessages as $messages){
+                    $dataToSend = AndroidPushController::getPushData($messages['deviceId'],AndroidPushController::loadSimpleMessage($messages['message']));
+                    Log::info($dataToSend);
+                    curl_setopt( $httpCall,CURLOPT_POSTFIELDS, $dataToSend);
+                    $result = curl_exec($httpCall);
+                    Log::info($result);
+                }
+                curl_close( $httpCall );
             }
-            curl_close( $httpCall );
         }
     }
 

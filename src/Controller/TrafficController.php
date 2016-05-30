@@ -421,6 +421,9 @@ class TrafficController extends ReaxiumAPIController
             case 3:
                 $trafficTypeName = 'SERVER';
                 break;
+            case 4:
+                $trafficTypeName = 'LOCATION_UPDATE';
+                break;
         }
         return $trafficTypeName;
     }
@@ -457,9 +460,10 @@ class TrafficController extends ReaxiumAPIController
      */
     public function getLastTrafficOfAUser($userId)
     {
+
         $response = array('userInABus' => false, 'object' => null);
         $trafficTable = TableRegistry::get("Traffic");
-        $lastAccess = $trafficTable->find('first', array('conditions' => array('user_id' => $userId), 'order' => array('datetime' => 'DESC')));
+        $lastAccess = $trafficTable->find('all', array('conditions' => array('user_id' => $userId), 'order' => array('datetime' => 'DESC'), 'limit' => 1));
         if ($lastAccess->count() > 0) {
             $lastAccess = $lastAccess->toArray();
             if ($lastAccess[0]['traffic_type_id'] == 1) {
