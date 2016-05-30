@@ -17,6 +17,10 @@ define("BIOMETRIC_FILE_PATH", "/reaxium_user_images/biometric_user_images/");
 define("BIOMETRIC_FILE_FULL_PATH", "/var/www/html/reaxium_user_images/biometric_user_images/");
 define("ADMIN_SCHOOL",5);
 define("CALL_CENTER",6);
+define("TYPE_USER_STUDENT",2);
+define("TYPE_ACCESS_DOCUMENT_ID",4);
+define("MIN_RANDOM",10000000);
+define("MAX_RANDOM",99999999);
 class UsersController extends ReaxiumAPIController
 {
 
@@ -221,21 +225,92 @@ class UsersController extends ReaxiumAPIController
      * @param $userJSON
      * @return created user
      */
-    private function createAUser($userJSON)
-    {
+    private function createAUser($userJSON){
+
         $userId = null;
-        $this->loadModel("Users");
-        $users = $this->Users->newEntity();
-        $users = $this->Users->patchEntity($users, $userJSON['Users']);
-        Log::info($users);
-        $result = $this->Users->save($users);
-        $userId = $result->user_id;
-        Log::info('UserId: ' . $userId);
-        $result['PhoneNumbers'] = $this->addPhoneToAUser($userJSON['PhoneNumbers'], $userId);
-        $result['Address'] = $this->addAddressToAUser($userJSON['address'], $userId);
+        $document_id = null;
+        $result = null;
+
+        try{
+
+            $this->loadModel("Users");
+            $users = $this->Users->newEntity();
+
+            //si no tiene document id se genera uno automatico
+            if(isset($userJSON['Users']['document_id']) && empty($userJSON['Users']['document_id'])){
+                Log::info("No existe document Id se crea uno nuevo");
+                $document_id = $this->findAndGenerateDocumentId();
+                Log::info("Document Id generado: " . $document_id);
+                $userJSON['Users']['document_id'] = $document_id;
+            }
+            else{
+                $document_id =  $userJSON['Users']['document_id'];
+            }
+
+            $users = $this->Users->patchEntity($users, $userJSON['Users']);
+            Log::info($users);
+            $result = $this->Users->save($users);
+            $userId = $result->user_id;
+            Log::info('UserId: ' . $userId);
+            $result['PhoneNumbers'] = $this->addPhoneToAUser($userJSON['PhoneNumbers'], $userId);
+            $result['Address'] = $this->addAddressToAUser($userJSON['address'], $userId);
+
+            if($result){
+                //validando tipo de accceso
+                if(!empty($userJSON['Users']['user_type_id']) && $userJSON['Users']['user_type_id'] == TYPE_USER_STUDENT ){
+
+                    Log::info("Proceso para crear acceso de estudiante");
+
+                    $userAccessTable = TableRegistry::get("UserAccessData");
+
+                    // se crea el tipo de acceso
+                    if(!isset($userJSON['Users']['user_id'])){
+
+                        Log::info("Creando un acceso al estudiante con ID: ".$userId);
+                        Log::info("Creando un acceso al estudiante con documento id: ".$document_id);
+
+                        $userAccessDate = $userAccessTable->newEntity();
+                        $userAccessDate->user_id = $userId;
+                        $userAccessDate->access_type_id = TYPE_ACCESS_DOCUMENT_ID;
+                        $userAccessDate->document_id = $document_id;
+                        $userAccessDate->status_id = 1;
+                        $userAccessTable->save($userAccessDate);
+                    }
+                    else if(isset($userJSON['Users']['user_id']) && !empty($userJSON['Users']['user_id'])){
+                        //se edita el tipo de acceso
+                        Log::info("Update acceso del usuario con id: ".$userId);
+                        Log::info("Update acceso del usuario con document_id: ".$document_id);
+
+                        $userAccessTable->updateAll(array('document_id'=>$document_id),array('user_id'=>$userId,'access_type_id'=>TYPE_ACCESS_DOCUMENT_ID));
+                    }
+                }
+            }
+        }catch (\Exception $e){
+            Log::info("Error creando usuario");
+            Log::info($e->getMessage());
+        }
 
         return $result;
     }
+
+    /**
+     *
+     * @return int|string
+     */
+    private function findAndGenerateDocumentId(){
+
+        $document_id = "";
+        $userTable = TableRegistry::get("Users");
+
+        while(true){
+            $document_id = rand(MIN_RANDOM,MAX_RANDOM);
+            $userData = $userTable->findByDocumentId($document_id);
+            if($userData->count() == 0){break;}
+        }
+
+        return $document_id;
+    }
+
 
     /**
      * @param $userJSON
