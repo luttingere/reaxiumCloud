@@ -168,6 +168,9 @@ class SynchroController extends ReaxiumAPIController
                     case 'RFID':
                         $accessTypeId = 3;
                         break;
+                    case 'DocumentID':
+                        $accessTypeId = 4;
+                        break;
                 }
 
                 $trafficInfo = "";
@@ -205,6 +208,7 @@ class SynchroController extends ReaxiumAPIController
                 'UserAccessData.rfid_code',
                 'UserAccessData.user_login_name',
                 'UserAccessData.user_password',
+                'UserAccessData.document_id',
                 'AccessType.access_type_name',
                 'Users.first_name',
                 'Users.second_name',

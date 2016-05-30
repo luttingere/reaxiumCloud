@@ -10,14 +10,75 @@ namespace App\Controller;
 
 
 use App\Util\ReaxiumApiMessages;
+use App\Util\ReaxiumUtil;
 use Cake\Core\Exception\Exception;
-
 use Cake\Log\Log;
 use Cake\ORM\TableRegistry;
 
 
 class RFIDController extends ReaxiumAPIController
 {
+
+
+    public function validateRFIDCard()
+    {
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $object = parent::getJsonReceived();
+        Log::info("Object Received:");
+        Log::info(json_encode($object));
+        try {
+            if (parent::validReaxiumJsonHeader($object)) {
+                if (isset($object['ReaxiumParameters']['RFIDValidation'])) {
+
+                    $arrayToTest = array('rfid_code');
+                    $validationResult = ReaxiumUtil::validateParameters($arrayToTest, $object['ReaxiumParameters']['RFIDValidation']);
+                    if ($validationResult['code'] == '0') {
+                        $rfidCode = $object['ReaxiumParameters']['RFIDValidation']['rfid_code'];
+                        $userAccessDataTable = TableRegistry::get("UserAccessData");
+                        $accessData = $userAccessDataTable->find('all', array(
+                            'fields' => array(
+                                'user_id'),
+                            'conditions' => array('rfid_code' => $rfidCode)));
+                        if ($accessData->count() > 0) {
+                            $accessData = $accessData->toArray();
+                            $userTable = TableRegistry::get("Users");
+                            $user = $userTable->findByUserId($accessData[0]['user_id'])->contain(array('Business'));
+                            if ($user->count() > 0) {
+
+                                $user = $user->toArray();
+                                $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$SUCCESS_CODE;
+                                $response['ReaxiumResponse']['message'] = 'Card already registered in system';
+                                $response['ReaxiumResponse']['object'] = array($user[0]);
+
+                            } else {
+                                $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                                $response['ReaxiumResponse']['message'] = 'The user id of this card are not registered in our system, contact Reaxium Support';
+                            }
+                        } else {
+                            $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                            $response['ReaxiumResponse']['message'] = 'This card are not configured to any user';
+                        }
+                    } else {
+                        $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_PARAMETERS_CODE;
+                        $response['ReaxiumResponse']['message'] = $validationResult['message'];
+
+                    }
+                } else {
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+            } else {
+                $response = parent::setInvalidJsonHeader($response);
+            }
+        } catch (\Exception $e) {
+            $response = parent::setInternalServiceError($response);
+            Log::info("Error validando el RFID: " . $e->getMessage());
+        }
+        Log::info("Response:");
+        Log::info(json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
 
     public function saveRFIDInformation()
     {

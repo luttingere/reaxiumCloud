@@ -1131,6 +1131,7 @@ class DeviceController extends ReaxiumAPIController
                 'UserAccessData.rfid_code',
                 'UserAccessData.user_login_name',
                 'UserAccessData.user_password',
+                'UserAccessData.document_id',
                 'AccessType.access_type_name',
                 'Users.first_name',
                 'Users.second_name',
