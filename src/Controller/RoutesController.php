@@ -195,7 +195,6 @@ class RoutesController extends ReaxiumAPIController
             ->order(array($sortedBy . ' ' . $sortDir));
 
 
-
         $routeStopUserObject = array('routes' => array());
 
         if ($deviceRouteFound->count() > 0) {
@@ -211,6 +210,8 @@ class RoutesController extends ReaxiumAPIController
                     'route_type' => $route['route']['route_type'],
                     'route_name' => $route['route']['route_name'],
                     'route_address' => $route['route']['route_address'],
+                    'route_type' => $route['route']['route_type'],
+                    'overview_polyline' => $route['route']['overview_polyline'],
                     'routes_stops_count' => $route['route']['routes_stops_count'],
                     'route_start_date' => $route['start_date'],
                     'route_end_date' => $route['end_date'],

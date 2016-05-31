@@ -942,6 +942,7 @@ class UsersController extends ReaxiumAPIController
                     $userFound = $userTable->find()
                         ->where($whereCondition)
                         ->andWhere($andCondition)
+                        ->contain(array('UserType','Business'))
                         ->order(array('first_name', 'first_last_name'));
 
                     if ($userFound->count() > 0) {

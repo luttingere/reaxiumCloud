@@ -45,7 +45,7 @@ class DeviceUpdateLocationController extends ReaxiumAPIController
                         Log::info("Position updated successfully: ");
 
 
-                        $datePlusSeconds = ReaxiumUtil::getSystemDateMinusTime(30, 'S');
+                        $datePlusSeconds = ReaxiumUtil::getSystemDateMinusTime(300, 'S');
 
                         Log::info($datePlusSeconds);
 
