@@ -17,6 +17,7 @@ class StopsUsersTable extends Table{
         $this->table('stops_users');
         $this->primaryKey('id_stops_user');
         $this->belongsTo('Users',array('foreignKey'=>'user_id'));
+        $this->belongsTo('Stops',array('foreignKey'=>'id_stop'));
 
     }
 

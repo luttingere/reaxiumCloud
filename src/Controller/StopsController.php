@@ -8,6 +8,7 @@
 
 namespace App\Controller;
 
+use Cake\Core\Exception\Exception;
 use Cake\Log\Log;
 use Cake\ORM\TableRegistry;
 use App\Util\ReaxiumApiMessages;
@@ -765,4 +766,96 @@ class StopsController extends ReaxiumAPIController
         $this->response->body(json_encode($response));
     }
 
+
+    public function getUserByIdForStops(){
+
+        Log::info("User by id for stops service invoke");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+
+        if(parent::validReaxiumJsonHeader($jsonObject)){
+
+            try{
+                $objUser = !isset($jsonObject['ReaxiumParameters']['ReaxiumStops']['object']) ? null : $jsonObject['ReaxiumParameters']['ReaxiumStops']['object'];
+
+                if(isset($objUser)){
+
+                    $stopsTable = TableRegistry::get("Stops");
+                    $stopsUserTable = TableRegistry::get("StopsUsers");
+
+                    $cont_user = 0;
+
+                    foreach($objUser as $user){
+
+                        $stopsUsersData = $stopsUserTable->findByUserId($user['user_id'])->contain(array('Stops'));
+
+                        if($stopsUsersData->count() > 0){
+
+                            $routeByStopsTable = TableRegistry::get("RoutesStopsRelationship");
+
+                            $stopsUsersData = $stopsUsersData->toArray();
+
+                            foreach($stopsUsersData as $stops){
+
+                                $entityStops = $stopsTable->newEntity();
+                                $entityStops->user_id = $stops['user_id'];
+                                $entityStops->id_stop = $stops['id_stop'];
+                                $entityStops->stop_number = $stops['stop']['stop_number'];
+                                $entityStops->stop_name = $stops['stop']['stop_name'];
+                                $entityStops->stop_address = $stops['stop']['stop_address'];
+
+                                $routeByStopsData = $routeByStopsTable->findByIdStop($stops['id_stop'])
+                                    ->select(array("Routes.id_route",
+                                        "Routes.route_number",
+                                        "Routes.route_name",
+                                        "Routes.route_address",
+                                        "Routes.route_type"))
+                                    ->contain(array('Routes'));
+
+                                if($routeByStopsData->count() > 0){
+
+                                    $routeByStopsData = $routeByStopsData->toArray();
+                                    $entityStops->routes = $routeByStopsData;
+
+                                }
+                                else{
+                                    Log::info("No existe Rutas asociada a la parada: ".$stops['id_stop']);
+                                    $entityStops->routes=[];
+
+                                }
+
+                                array_push($response['ReaxiumResponse']['object'],$entityStops);
+                            }
+
+                            $response = parent::setSuccessfulResponse($response);
+                        }
+                        else{
+                            $cont_user++;
+                            if($cont_user == count($objUser)){
+                                Log::info("Usuario no relacionado con ninguna parada");
+                                $response['ReaxiumResponse']['code'] = "1";
+                                $response['ReaxiumResponse']['message'] = 'User has no related shutdowns';
+                            }
+                        }
+                    }
+
+                }
+                else{
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+            }
+            catch (\Exception $e){
+                Log::info('Error get stop by id: ' . $e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+
+        }
+        else{
+            $response = parent::seInvalidParametersMessage($response);
+        }
+
+        Log::info(json_encode($response));
+        $this->response->body(json_encode($response));
+    }
 }
