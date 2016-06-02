@@ -18,6 +18,7 @@ class RoutesStopsRelationshipTable extends Table{
         parent::initialize($config);
         $this->table('routes_stops_relationship');
         $this->belongsTo('Stops', array('foreignKey' => 'id_stop'));
+        $this->belongsTo('Routes', array('foreignKey' => 'id_route'));
 
     }
 

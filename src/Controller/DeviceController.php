@@ -2005,4 +2005,55 @@ class DeviceController extends ReaxiumAPIController
     }
 
 
+    public function getLocationDevice(){
+
+        Log::info("Traking device service call");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+
+        if(parent::validReaxiumJsonHeader($jsonObject)){
+
+            try{
+
+                $device_id = !isset($jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id'])? null : $jsonObject['ReaxiumParameters']['ReaxiumDevice']['device_id'];
+
+                if($device_id){
+
+                    $deviceLocationTable = TableRegistry::get("DeviceLocation");
+                    $deviceLocationData = $deviceLocationTable->findByDeviceId($device_id);
+
+                    if($deviceLocationData->count()>0){
+                        $deviceLocationData = $deviceLocationData->toArray();
+
+                    }else{
+                        $deviceLocationData = null;
+                    }
+
+                    if(isset($deviceLocationData)){
+                        $response = parent::setSuccessfulResponse($response);
+                        $response['ReaxiumResponse']['object'] = $deviceLocationData;
+                    }else{
+                        $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$CANNOT_SAVE;
+                        $response['ReaxiumResponse']['message'] = 'I not been found this device in the system to track';
+                        $response['ReaxiumResponse']['object'] = [];
+                    }
+
+
+                }else{
+                    $response = parent::setInvalidJsonMessage($response);
+                }
+             }
+            catch (\Exception $e){
+                Log::info("Error Traking the Device " . $e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+        }else{
+            $response = parent::setInvalidJsonMessage($response);
+        }
+
+        Log::info("Responde Object: " . json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
 }
