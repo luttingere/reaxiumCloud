@@ -924,7 +924,6 @@ class UsersController extends ReaxiumAPIController
                     )));
 
 
-
                     $userTypeId = !isset($jsonObject['ReaxiumParameters']["Users"]["user_type_id"]) ? null : $jsonObject['ReaxiumParameters']["Users"]["user_type_id"];
 
                     if(isset($userTypeId) && $userTypeId == CALL_CENTER){
