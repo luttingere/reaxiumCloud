@@ -10,13 +10,16 @@ namespace App\Controller;
 
 use App\Util\ReaxiumApiMessages;
 use App\Util\ReaxiumUtil;
+use Cake\Core\Exception\Exception;
 use Cake\Log\Log;
 use Cake\ORM\TableRegistry;
 use Cake\Utility\Security;
+use Cake\Mailer\Email;
 
 define('TYPE_ACCESS_LOGIN',1);
 define('TYPE_ACCESS_BIOMETRIC',2);
 define('TYPE_RFID',3);
+define("TYPE_USER_PARENTS",3);
 class AccessController extends ReaxiumAPIController
 {
 
@@ -883,8 +886,7 @@ class AccessController extends ReaxiumAPIController
 
 
     //TODO nuevo servicio pendiente documentacion
-    public function createAccessNewUser()
-    {
+    public function createAccessNewUser(){
 
         Log::info("Create Access Service invoked");
 
@@ -926,6 +928,25 @@ class AccessController extends ReaxiumAPIController
                             $userAccessData->user_login_name = $user_login;
                             $userAccessData->user_password = $user_password;
                             $userAccessData = $userDataAccessTable->save($userAccessData);
+
+                            $userController = new UsersController();
+                            $userInfo = $userController->getUser($user_id);
+                            Log::info(json_encode($userInfo));
+
+                            if($userInfo[0]['user_type_id'] == TYPE_USER_PARENTS){
+
+                                $to = $userInfo[0]['email'];
+                                $subject = "Welcome To Reaxium";
+                                $userName = $userInfo[0]['first_name'] .' '. $userInfo[0]['second_name'];
+                                $template = 'welcome_email';
+                                $params = array('parentName'=>$userName,'parentUserName'=>$user_login,'parentPassword'=>$user_password);
+
+                                Log::info('Enviando correo al usuario...');
+                                Log::info(json_encode($params));
+
+                                $this->sendMail($to,$subject,$template,$params);
+                            }
+
 
                             Log::info("Accesso creado para el usuario: " + $user_id);
                             Log::info(json_encode($userAccessData));
@@ -1240,4 +1261,27 @@ class AccessController extends ReaxiumAPIController
 
         return $configure;
     }
+
+
+    private function sendMail($to, $subject, $template, $params){
+
+        try{
+
+            $email = new Email('default');
+            $email->emailFormat('html');
+            $email->template($template);
+            $email->viewVars($params);
+            $email->from(array(ReaxiumApiMessages::$EMAILS[0] => 'Reaxium'));
+            $email->to($to);
+            $email->subject($subject);
+            $email->send();
+            Log::info("Email sent to: " . $to);
+
+        }catch(\Exception $e){
+            Log::info("Error enviando correo" . $e->getMessage());
+
+        }
+
+    }
+
 }

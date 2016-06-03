@@ -64,4 +64,6 @@ class ReaxiumApiMessages
     public static $USER_TYPE_ADMIN_CALL_CENTER = 6;
     public static $ACTIVE_MENU_FOR_TYPE_USER = 1;
 
+    public static $EMAILS = ['reaxiumSystem@t2ss.com'];
+
 }
