@@ -14,7 +14,8 @@ use App\Util\ReaxiumApiMessages;
 
 define('PATH_DIRECTORY', '../../reports_school/');
 define('DEFAULT_URL_PHOTO_USER', 'http://54.200.133.84/reaxium_user_images/profile-default.png');
-
+define("TYPE_USER_STUDENT",2);
+define("TYPE_ACCESS_DOCUMENT_ID",4);
 class BulkController extends ReaxiumAPIController{
 
 
@@ -80,6 +81,7 @@ class BulkController extends ReaxiumAPIController{
                         $usersTable = TableRegistry::get("Users");
                         $phoneTable = TableRegistry::get("PhoneNumbers");
                         $addressTable = TableRegistry::get("Address");
+                        $userAccessTable = TableRegistry::get("UserAccessData");
 
                         $validate = true;
                         $messageError = array('code' => 0, 'message' => '');
@@ -183,7 +185,7 @@ class BulkController extends ReaxiumAPIController{
 
                                     $entityUser->email = $emailUser;
 
-                                    $validate = $this->createUser($usersTable, $entityUser, $phoneTable, $arrayPhone, $addressTable, $entityAddress);
+                                    $validate = $this->createUser($usersTable, $entityUser, $phoneTable, $arrayPhone, $addressTable, $entityAddress,$userAccessTable);
                                 }
                             }
 
@@ -520,7 +522,7 @@ class BulkController extends ReaxiumAPIController{
      * @param $entityAddress
      * @return bool
      */
-    private function createUser($usersTable, $entityUser, $phoneTable, $arrayPhone, $addressTable, $entityAddress)
+    private function createUser($usersTable, $entityUser, $phoneTable, $arrayPhone, $addressTable, $entityAddress,$userAccessTable)
     {
 
         $validate = true;
@@ -541,11 +543,13 @@ class BulkController extends ReaxiumAPIController{
                 $addressTable,
                 $entityAddress,
                 $phoneNumbersRelationshipTable,
-                $addressRelationshipTable
+                $addressRelationshipTable,
+                $userAccessTable
             ) {
 
                 //$conn->execute('UPDATE phone_numbers SET phone_name = ? WHERE phone_number_id = ?', ["Home", 1]);
                 //$conn->execute('UPDATE users SET second_name = ? WHERE user_id = ?', ["test14", 80]);
+                //$entityUser->user_type_id
 
                 //save table user
                 $resultUserSave = $usersTable->save($entityUser);
@@ -567,6 +571,25 @@ class BulkController extends ReaxiumAPIController{
                 $entityRelationUserAddress->address_id = $resultAddressSave['address_id'];
                 $entityRelationUserAddress->user_id = $resultUserSave['user_id'];
                 $addressRelationshipTable->save($entityRelationUserAddress);
+
+
+                //validando tipo de accceso
+                if(isset($resultUserSave['user_type_id']) && $resultUserSave['user_type_id'] == TYPE_USER_STUDENT ){
+
+                    Log::info("Proceso para crear acceso de estudiante");
+
+                    // se crea el tipo de acceso
+
+                        Log::info("Creando un acceso al estudiante con ID: ".$resultUserSave['user_id']);
+                        Log::info("Creando un acceso al estudiante con documento id: ".$resultUserSave['document_id']);
+
+                        $userAccessDate = $userAccessTable->newEntity();
+                        $userAccessDate->user_id = $resultUserSave['user_id'];
+                        $userAccessDate->access_type_id = TYPE_ACCESS_DOCUMENT_ID;
+                        $userAccessDate->document_id = $resultUserSave['document_id'];
+                        $userAccessDate->status_id = 1;
+                        $userAccessTable->save($userAccessDate);
+                }
 
             });
         } catch (\Exception $e) {
