@@ -20,6 +20,7 @@ define('EMERGENCY_ALARM', '1');
 define('TRAFFIC_ALARM', '2');
 define('CHECK_ENGINE_ALARM', '3');
 define('ACCIDENT_ALARM', '4');
+define('NEXT_STOP_AWARE', '5');
 
 class AlarmController extends ReaxiumAPIController
 {
@@ -40,6 +41,9 @@ class AlarmController extends ReaxiumAPIController
                 break;
             case ACCIDENT_ALARM;
                 $alarmMessage = 'The Driver @DriverName@ fire a Accident Alarm from the Reaxium Device ID @device_id@';
+                break;
+            case NEXT_STOP_AWARE:
+                $alarmMessage = 'Your stop is the next!';
                 break;
         }
         return $alarmMessage;
@@ -73,6 +77,62 @@ class AlarmController extends ReaxiumAPIController
                         $alarmMessage = self::getAlarmMessage($notificationType);
                         $alarmMessage = str_replace("@DriverName@", $driverName, $alarmMessage);
                         $alarmMessage = str_replace("@device_id@", $deviceId, $alarmMessage);
+
+                        $notification = $this->getNotificationMessage(SERVER_TRAFFIC_TYPE, $alarmMessage, $deviceId, $arrayOfStakeHolders);
+
+
+                        try{AndroidPushController::sendBulkPush($notification['bulkAndroid']);}catch(\Exception $e){Log::info("Error enviando notification push ANDROID".$e->getMessage());}
+//                        try{IOSPushController::bulkSendIOSNotification($notification['bulkIOS']);}catch(\Exception $e){Log::info("Error enviando notification push IOS".$e->getMessage());}
+
+
+                        $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$SUCCESS_CODE;
+                        $response['ReaxiumResponse']['message'] = 'Notification sent successfully';
+                        $response['ReaxiumResponse']['object'] = array($notification);
+
+                    } else {
+                        $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_PARAMETERS_CODE;
+                        $response['ReaxiumResponse']['message'] = $validationResult['message'];
+                    }
+                } else {
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+            } else {
+                $response = parent::setInvalidJsonHeader($response);
+            }
+        } catch (\Exception $e) {
+            $response = parent::setInternalServiceError($response);
+            Log::info("Error enviando la alarma, Error message: " . $e->getMessage());
+        }
+        Log::info('Respuesta del servicio de notificacion al Usuario:');
+        Log::info(json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
+    public function sendNextStopNotification()
+    {
+        Log::info('sendNotification service involed ');
+        parent::setResultAsAJson();
+        $jsonObjectReceived = parent::getJsonReceived();
+        $response = parent::getDefaultReaxiumMessage();
+
+        Log::info('Object Received: ');
+        Log::info(json_encode($jsonObjectReceived));
+        try {
+            if (parent::validReaxiumJsonHeader($jsonObjectReceived)) {
+                if (isset($jsonObjectReceived['ReaxiumParameters']['Notification'])) {
+                    $arrayParametersToTest = array('notification_type', 'users_id', 'device_id','driver_name');
+                    $validationResult = ReaxiumUtil::validateParameters($arrayParametersToTest, $jsonObjectReceived['ReaxiumParameters']['Notification']);
+                    if ($validationResult['code'] == '0') {
+
+                        //parametros
+                        $deviceId = $jsonObjectReceived['ReaxiumParameters']['Notification']['device_id'];
+                        $notificationType = $jsonObjectReceived['ReaxiumParameters']['Notification']['notification_type'];
+                        $arrayOfUsersID = $jsonObjectReceived['ReaxiumParameters']['Notification']['users_id'];
+                        $driverName = $jsonObjectReceived['ReaxiumParameters']['Notification']['driver_name'];
+
+                        //envio de la alarma como notification
+                        $arrayOfStakeHolders = $this->getArrayOfStakeHolderToBeNotified($arrayOfUsersID);
+                        $alarmMessage = self::getAlarmMessage($notificationType);
 
                         $notification = $this->getNotificationMessage(SERVER_TRAFFIC_TYPE, $alarmMessage, $deviceId, $arrayOfStakeHolders);
 

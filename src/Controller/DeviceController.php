@@ -149,7 +149,7 @@ class DeviceController extends ReaxiumAPIController
     {
         $device = TableRegistry::get("ReaxiumDevice");
         $device = $device->find()
-            ->where(array('device_id' => $deviceId))
+            ->where(array('device_id' => $deviceId, 'status_id' => 1))
             ->contain(array("Status", "Applications", "Business"));
         if ($device->count() > 0) {
             $device = $device->toArray();
@@ -844,10 +844,12 @@ class DeviceController extends ReaxiumAPIController
                 if (isset($jsonObject['ReaxiumParameters']["ReaxiumDevice"])) {
                     $deviceId = $jsonObject['ReaxiumParameters']["ReaxiumDevice"]['device_id'];
                     $deviceToken = $jsonObject['ReaxiumParameters']["ReaxiumDevice"]['device_token'];
+                    $deviceSerial = $jsonObject['ReaxiumParameters']["ReaxiumDevice"]['device_serial'];
+
                     if (isset($deviceId) && isset($deviceToken)) {
                         $reaxiumDevice = $this->getDeviceInfo($deviceId);
                         if (isset($reaxiumDevice)) {
-                            if ($reaxiumDevice[0]['configured'] == 0) {
+                            if ($reaxiumDevice[0]['device_serial'] == $deviceSerial) {
 
                                 $fields = array('configured' => 1, 'device_token' => $deviceToken);
                                 $conditions = array('device_id' => $deviceId);
@@ -862,7 +864,7 @@ class DeviceController extends ReaxiumAPIController
 
                             } else {
                                 $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$DEVICE_ALREADY_CONFIGURED_CODE;
-                                $response['ReaxiumResponse']['message'] = ReaxiumApiMessages::$DEVICE_ALREADY_CONFIGURED_MESSAGE;
+                                $response['ReaxiumResponse']['message'] = 'No matching serial number: '.$deviceSerial.' with device ID'.$deviceId;
                             }
                         } else {
                             $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
