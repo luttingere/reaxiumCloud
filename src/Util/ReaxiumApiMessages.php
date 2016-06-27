@@ -31,7 +31,7 @@ class ReaxiumApiMessages
     public static $INVALID_JSON_HEADER_MESSAGE = 'Invalid Json Header';
 
     public static $INVALID_USER_ACCESS_CODE = 05;
-    public static $INVALID_USER_ACCESS_MESSAGE = 'Invalid User';
+    public static $INVALID_USER_ACCESS_MESSAGE = 'The username that you\'ve entered doesn\'t match any account.';
 
     public static $INVALID_USER_STATUS_CODE = 06;
     public static $INVALID_USER_STATUS_MESSAGE = 'Invalid Status User';
