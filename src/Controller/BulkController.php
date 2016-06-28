@@ -8,14 +8,21 @@
 
 namespace App\Controller;
 
+use Cake\Core\Exception\Exception;
 use Cake\Log\Log;
 use Cake\ORM\TableRegistry;
 use App\Util\ReaxiumApiMessages;
 
+//PATH PRODUCCION
+//define('PATH_DIRECTORY', '../../reaxium_reports/');
+//PATH DESARROLLO
 define('PATH_DIRECTORY', '../../reports_school/');
 define('DEFAULT_URL_PHOTO_USER', 'http://54.200.133.84/reaxium_user_images/profile-default.png');
 define("TYPE_USER_STUDENT",2);
+define("TYPE_USER_STAKEHOLDER",3);
 define("TYPE_ACCESS_DOCUMENT_ID",4);
+define("MIN_RANDOM",10000000);
+define("MAX_RANDOM",99999999);
 class BulkController extends ReaxiumAPIController{
 
 
@@ -103,6 +110,7 @@ class BulkController extends ReaxiumAPIController{
                                 $typeUser = empty(trim($csv[$i][10])) ? null : trim($csv[$i][10]);
                                 $userAddress = empty($csv[$i][11]) ? null : $csv[$i][11];
                                 $emailUser = empty(trim($csv[$i][12])) ? null : trim($csv[$i][12]);
+                                $documentIdSForParents = empty(trim($csv[$i][13])) ? null : trim($csv[$i][13]);
 
 
                                 if (isset($documentId) && isset($firstName)
@@ -115,7 +123,49 @@ class BulkController extends ReaxiumAPIController{
 
                                     $arrayPhone = array();
 
-                                    $entityUser->document_id = $documentId;
+                                    // se obtiene id del tipo de usuario
+                                    $user_type = $this->findTypeUserId($typeUser);
+
+                                    if (isset($user_type)) {
+                                        $entityUser->user_type_id = $user_type[0]['user_type_id'];
+                                    }
+                                    else {
+
+                                        $messageError['code'] = 2;
+                                        $messageError['message'] = 'User type is invalid in row: ' . $i;
+                                        break;
+                                    }
+
+                                    // se obtiene el id del negocio
+                                    $business = $this->findSchoolId($businessNumber);
+
+                                    if (isset($business)) {
+                                        $entityUser->business_id = $business[0]['business_id'];
+                                    }
+                                    else {
+
+                                        $messageError['code'] = 1;
+                                        $messageError['message'] = 'business number is invalid in row: ' . $i;
+                                        break;
+                                    }
+
+                                    // si el tipo de usuario es estudiante se obtiene el ID de csv de resto se genera automaticamente
+                                    //para otro usuario
+                                    if($entityUser->user_type_id == TYPE_USER_STUDENT){
+                                        $entityUser->document_id = $documentId;
+                                    }
+                                    else if($entityUser->user_type_id == TYPE_USER_STAKEHOLDER){
+                                        if(isset($documentIdSForParents)){
+                                            $entityUser->document_id = $this->findAndGenerateDocumentId();
+                                        }
+                                        else{
+                                            $messageError['code'] = 3;
+                                            $messageError['message'] = 'field of relationship parents and students is empty: ' . $i;
+                                            break;
+                                        }
+
+                                    }
+
                                     $entityUser->first_name = $firstName;
                                     $entityUser->second_name = $middleName;
                                     $entityUser->first_last_name = $lastName;
@@ -145,27 +195,7 @@ class BulkController extends ReaxiumAPIController{
 
                                     $entityUser->status_id = 1;
                                     $entityUser->user_photo = DEFAULT_URL_PHOTO_USER;
-                                    $business = $this->findSchoolId($businessNumber);
 
-                                    if (isset($business)) {
-                                        $entityUser->business_id = $business[0]['business_id'];
-                                    } else {
-                                        $validate = false;
-                                        $messageError['code'] = 1;
-                                        $messageError['message'] = 'business number is invalid in row: ' . $i;
-                                        break;
-                                    }
-
-                                    $user_type = $this->findTypeUserId($typeUser);
-
-                                    if (isset($user_type)) {
-                                        $entityUser->user_type_id = $user_type[0]['user_type_id'];
-                                    } else {
-                                        $validate = false;
-                                        $messageError['code'] = 2;
-                                        $messageError['message'] = 'User type is invalid in row: ' . $i;
-                                        break;
-                                    }
 
                                     //address falta como obtener logitud latitud
                                     if (isset($userAddress)) {
@@ -185,7 +215,12 @@ class BulkController extends ReaxiumAPIController{
 
                                     $entityUser->email = $emailUser;
 
-                                    $validate = $this->createUser($usersTable, $entityUser, $phoneTable, $arrayPhone, $addressTable, $entityAddress,$userAccessTable);
+                                    if($entityUser->user_type_id == TYPE_USER_STUDENT){
+                                        $validate = $this->createUser($usersTable, $entityUser, $phoneTable, $arrayPhone, $addressTable, $entityAddress,$userAccessTable);
+                                    }
+                                    else if($entityUser->user_type_id == TYPE_USER_STAKEHOLDER){
+                                        $validate = $this->createStakeHolder($usersTable, $entityUser, $phoneTable, $arrayPhone, $addressTable, $entityAddress,$documentIdSForParents);
+                                    }
                                 }
                             }
 
@@ -544,8 +579,7 @@ class BulkController extends ReaxiumAPIController{
                 $entityAddress,
                 $phoneNumbersRelationshipTable,
                 $addressRelationshipTable,
-                $userAccessTable
-            ) {
+                $userAccessTable) {
 
                 //$conn->execute('UPDATE phone_numbers SET phone_name = ? WHERE phone_number_id = ?', ["Home", 1]);
                 //$conn->execute('UPDATE users SET second_name = ? WHERE user_id = ?', ["test14", 80]);
@@ -595,6 +629,114 @@ class BulkController extends ReaxiumAPIController{
         } catch (\Exception $e) {
             Log::info("Error creando el usuario: " . $e->getMessage());
             $validate = false;
+        }
+
+        if($validate){
+            Log::info("Creacion del Usuario Student con DocumentId: ".$entityUser->document_id);
+        }
+
+        return $validate;
+    }
+
+    /**
+     * Metodo para crear relacion de usuario Stakeholder
+     * @param $usersTable
+     * @param $entityUser
+     * @param $userData
+     * @return bool
+     */
+    private function createStakeHolder($usersTable,$entityUser, $phoneTable, $arrayPhone, $addressTable, $entityAddress,$documentStudents){
+
+        $validate = true;
+
+        try{
+            $conn = $usersTable->connection();
+
+            $phoneNumbersRelationshipTable = TableRegistry::get("PhoneNumbersRelationship");
+            $addressRelationshipTable = TableRegistry::get("AddressRelationship");
+            $userRelationShipTable = TableRegistry::get("UsersRelationship");
+            $stakeholderTable = TableRegistry::get("Stakeholders");
+
+            // comprobando si existe los id de los studiantes
+
+            $userRelationShip = explode(",",$documentStudents);
+            $userIdRelationParent = [];
+
+            foreach($userRelationShip as $documentId){
+                $userId = $this->findByDocumentIdUser($documentId);
+                if(isset($userId)){
+                    array_push($userIdRelationParent,$userId);
+                }else{
+                    throw new Exception("Estudiante no registrado para completar la relacion: "."document ID: ".$documentId);
+                }
+            }
+
+            if(count($userIdRelationParent) > 0){
+
+                $conn->transactional(function () use ($usersTable,
+                    $entityUser,
+                    $phoneTable,
+                    $arrayPhone,
+                    $addressTable,
+                    $entityAddress,
+                    $userRelationShipTable,
+                    $stakeholderTable,
+                    $documentStudents,
+                    $phoneNumbersRelationshipTable,
+                    $addressRelationshipTable,
+                    $userIdRelationParent){
+
+
+
+                    //save table user
+                    $resultUserSave = $usersTable->save($entityUser);
+
+                    //save phones
+                    foreach ($arrayPhone as $entityPhone) {
+
+                        $resultPhoneSave = $phoneTable->save($entityPhone);
+                        $entityRelationUserPhone = $phoneNumbersRelationshipTable->newEntity();
+                        $entityRelationUserPhone->phone_number_id = $resultPhoneSave['phone_number_id'];
+                        $entityRelationUserPhone->user_id = $resultUserSave['user_id'];
+                        $phoneNumbersRelationshipTable->save($entityRelationUserPhone);
+                    }
+
+                    //save address
+
+                    $resultAddressSave = $addressTable->save($entityAddress);
+                    $entityRelationUserAddress = $addressRelationshipTable->newEntity();
+                    $entityRelationUserAddress->address_id = $resultAddressSave['address_id'];
+                    $entityRelationUserAddress->user_id = $resultUserSave['user_id'];
+                    $addressRelationshipTable->save($entityRelationUserAddress);
+
+
+                    // save date stakeholder relation
+                    $stakeholder = $stakeholderTable->newEntity();
+                    $stakeholder->user_id = $resultUserSave['user_id'];
+                    $stakeholderId = $stakeholderTable->save($stakeholder);
+                    $stakeholderId = $stakeholderId->stakeholder_id;
+
+                    //buscar los id de los estudiantes relacionados al padre por document ID
+
+                    foreach ($userIdRelationParent as $userId) {
+                        $relationshipObject = $userRelationShipTable->newEntity();
+                        $relationshipObject->stakeholder_id = $stakeholderId;
+                        $relationshipObject->user_id = $userId;
+                        $userRelationShipTable->save($relationshipObject);
+
+                    }
+
+                });
+            }
+
+
+        }catch(\Exception $e){
+            Log::info("Error creando el usuario stakeholder: " . $e->getMessage());
+            $validate = false;
+        }
+
+        if($validate){
+            Log::info("Creacion del Usuario StakeHolder con DocumentId: ".$entityUser->document_id);
         }
 
         return $validate;
@@ -775,5 +917,41 @@ class BulkController extends ReaxiumAPIController{
     }
 
 
-    //private function getUser
+    /**
+     * AutoGenera un document id
+     * @return int|string
+     */
+    private function findAndGenerateDocumentId(){
+
+        $document_id = "";
+        $userTable = TableRegistry::get("Users");
+
+        while(true){
+            $document_id = rand(MIN_RANDOM,MAX_RANDOM);
+            $userData = $userTable->findByDocumentId($document_id);
+            if($userData->count() == 0){break;}
+        }
+
+        return $document_id;
+    }
+
+    /**
+     * Buscar user id del usuario por document id
+     * @param $documentId
+     * @return null
+     */
+    private function findByDocumentIdUser($documentId){
+
+        $userId = null;
+        $userTable = TableRegistry::get("Users");
+        $userData = $userTable->findByDocumentId($documentId);
+
+        if($userData->count() > 0){
+            $userData = $userData->toArray();
+            $userId = $userData[0]['user_id'];
+        }
+
+        return $userId;
+    }
+
 }

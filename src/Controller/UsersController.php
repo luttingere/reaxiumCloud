@@ -645,7 +645,10 @@ class UsersController extends ReaxiumAPIController
         if ($userfound->count() > 0) {
             $userfound = $userfound->toArray();
             $usersArray = array();
+
             foreach ($userfound as $user) {
+
+                $user['user']['business'] = $this->getBusinessUser($user['user']['business_id']);
                 array_push($usersArray, $user['user']);
             }
             $userfound = $usersArray;
@@ -654,6 +657,33 @@ class UsersController extends ReaxiumAPIController
         }
         return $userfound;
     }
+
+    /**
+     * @param $idBusiness
+     * @return \Cake\Datasource\EntityInterface|\Cake\ORM\Entity
+     */
+    private function getBusinessUser($idBusiness){
+
+        $businessTable = TableRegistry::get("Business");
+        $entityBusiness = $businessTable->newEntity();
+
+        $businessFound = $businessTable->findByBusinessId($idBusiness);
+
+        if($businessFound->count() > 0){
+            $businessFound = $businessFound->toArray();
+
+            foreach($businessFound as $business){
+                $entityBusiness->business_id = $business['business_id'];
+                $entityBusiness->business_name = $business['business_name'];
+                $entityBusiness->status_id = $business['status_id'];
+
+            }
+        }
+
+
+        return $entityBusiness;
+    }
+
 
     /**
      *
