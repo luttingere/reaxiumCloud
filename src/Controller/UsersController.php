@@ -833,14 +833,33 @@ class UsersController extends ReaxiumAPIController
                     $userTypeId = !isset($jsonObject['ReaxiumParameters']["user_type_id"]) ? null : $jsonObject['ReaxiumParameters']["user_type_id"];
 
                     if(isset($userTypeId) && $userTypeId == CALL_CENTER){
-                        $andCondition = array('Users.status_id' => 1,array('NOT'=>array('Users.user_type_id'=>1)));
+                        $andCondition = array(
+                            'OR'=>array(
+                                array('Users.status_id' => 1),
+                                array('Users.status_id' => 2)
+                            ),
+                            array('NOT'=>array('Users.user_type_id'=>1)));
                     }
                     elseif(isset($userTypeId) && $userTypeId == ADMIN_SCHOOL){
 
                         $business_id = !isset($jsonObject['ReaxiumParameters']["business_id"]) ? null : $jsonObject['ReaxiumParameters']["business_id"];
-                        $andCondition = isset($business_id) ? array('Users.status_id' => 1,'Users.business_id'=>$business_id) : array('Users.status_id' => 1);
-                    }else{
-                        $andCondition = array('Users.status_id' => 1);
+                        $andCondition = isset($business_id) ?
+                            array( 'OR'=>array(
+                                array('Users.status_id' => 1),
+                                array('Users.status_id' => 2)
+                            ),'Users.business_id'=>$business_id) :
+
+                            array( 'OR'=>array(
+                                array('Users.status_id' => 1),
+                                array('Users.status_id' => 2)
+                            ));
+                    }
+                    else{
+                        $andCondition = array(
+                            'OR'=>array(
+                                array('Users.status_id' => 1),
+                                array('Users.status_id' => 2),
+                            ));
                     }
 
 

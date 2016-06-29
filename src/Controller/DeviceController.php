@@ -149,7 +149,7 @@ class DeviceController extends ReaxiumAPIController
     {
         $device = TableRegistry::get("ReaxiumDevice");
         $device = $device->find()
-            ->where(array('device_id' => $deviceId, 'status_id' => 1))
+            ->where(array('device_id' => $deviceId, 'ReaxiumDevice.status_id' => 1))
             ->contain(array("Status", "Applications", "Business"));
         if ($device->count() > 0) {
             $device = $device->toArray();
