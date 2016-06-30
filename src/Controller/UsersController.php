@@ -11,16 +11,18 @@ namespace App\Controller;
 use Cake\Log\Log;
 use Cake\ORM\TableRegistry;
 use App\Util\ReaxiumApiMessages;
+use App\Util\ReaxiumUtil;
 
 
 define("BIOMETRIC_FILE_PATH", "/reaxium_user_images/biometric_user_images/");
 define("BIOMETRIC_FILE_FULL_PATH", "/var/www/html/reaxium_user_images/biometric_user_images/");
-define("ADMIN_SCHOOL",5);
-define("CALL_CENTER",6);
-define("TYPE_USER_STUDENT",2);
-define("TYPE_ACCESS_DOCUMENT_ID",4);
-define("MIN_RANDOM",10000000);
-define("MAX_RANDOM",99999999);
+define("ADMIN_SCHOOL", 5);
+define("CALL_CENTER", 6);
+define("TYPE_USER_STUDENT", 2);
+define("TYPE_ACCESS_DOCUMENT_ID", 4);
+define("MIN_RANDOM", 10000000);
+define("MAX_RANDOM", 99999999);
+
 class UsersController extends ReaxiumAPIController
 {
 
@@ -225,26 +227,26 @@ class UsersController extends ReaxiumAPIController
      * @param $userJSON
      * @return created user
      */
-    private function createAUser($userJSON){
+    private function createAUser($userJSON)
+    {
 
         $userId = null;
         $document_id = null;
         $result = null;
 
-        try{
+        try {
 
             $this->loadModel("Users");
             $users = $this->Users->newEntity();
 
             //si no tiene document id se genera uno automatico
-            if(isset($userJSON['Users']['document_id']) && empty($userJSON['Users']['document_id'])){
+            if (isset($userJSON['Users']['document_id']) && empty($userJSON['Users']['document_id'])) {
                 Log::info("No existe document Id se crea uno nuevo");
                 $document_id = $this->findAndGenerateDocumentId();
                 Log::info("Document Id generado: " . $document_id);
                 $userJSON['Users']['document_id'] = $document_id;
-            }
-            else{
-                $document_id =  $userJSON['Users']['document_id'];
+            } else {
+                $document_id = $userJSON['Users']['document_id'];
             }
 
             $users = $this->Users->patchEntity($users, $userJSON['Users']);
@@ -255,19 +257,19 @@ class UsersController extends ReaxiumAPIController
             $result['PhoneNumbers'] = $this->addPhoneToAUser($userJSON['PhoneNumbers'], $userId);
             $result['Address'] = $this->addAddressToAUser($userJSON['address'], $userId);
 
-            if($result){
+            if ($result) {
                 //validando tipo de accceso
-                if(!empty($userJSON['Users']['user_type_id']) && $userJSON['Users']['user_type_id'] == TYPE_USER_STUDENT ){
+                if (!empty($userJSON['Users']['user_type_id']) && $userJSON['Users']['user_type_id'] == TYPE_USER_STUDENT) {
 
                     Log::info("Proceso para crear acceso de estudiante");
 
                     $userAccessTable = TableRegistry::get("UserAccessData");
 
                     // se crea el tipo de acceso
-                    if(!isset($userJSON['Users']['user_id'])){
+                    if (!isset($userJSON['Users']['user_id'])) {
 
-                        Log::info("Creando un acceso al estudiante con ID: ".$userId);
-                        Log::info("Creando un acceso al estudiante con documento id: ".$document_id);
+                        Log::info("Creando un acceso al estudiante con ID: " . $userId);
+                        Log::info("Creando un acceso al estudiante con documento id: " . $document_id);
 
                         $userAccessDate = $userAccessTable->newEntity();
                         $userAccessDate->user_id = $userId;
@@ -275,17 +277,16 @@ class UsersController extends ReaxiumAPIController
                         $userAccessDate->document_id = $document_id;
                         $userAccessDate->status_id = 1;
                         $userAccessTable->save($userAccessDate);
-                    }
-                    else if(isset($userJSON['Users']['user_id']) && !empty($userJSON['Users']['user_id'])){
+                    } else if (isset($userJSON['Users']['user_id']) && !empty($userJSON['Users']['user_id'])) {
                         //se edita el tipo de acceso
-                        Log::info("Update acceso del usuario con id: ".$userId);
-                        Log::info("Update acceso del usuario con document_id: ".$document_id);
+                        Log::info("Update acceso del usuario con id: " . $userId);
+                        Log::info("Update acceso del usuario con document_id: " . $document_id);
 
-                        $userAccessTable->updateAll(array('document_id'=>$document_id),array('user_id'=>$userId,'access_type_id'=>TYPE_ACCESS_DOCUMENT_ID));
+                        $userAccessTable->updateAll(array('document_id' => $document_id), array('user_id' => $userId, 'access_type_id' => TYPE_ACCESS_DOCUMENT_ID));
                     }
                 }
             }
-        }catch (\Exception $e){
+        } catch (\Exception $e) {
             Log::info("Error creando usuario");
             Log::info($e->getMessage());
         }
@@ -297,15 +298,18 @@ class UsersController extends ReaxiumAPIController
      *
      * @return int|string
      */
-    private function findAndGenerateDocumentId(){
+    private function findAndGenerateDocumentId()
+    {
 
         $document_id = "";
         $userTable = TableRegistry::get("Users");
 
-        while(true){
-            $document_id = rand(MIN_RANDOM,MAX_RANDOM);
+        while (true) {
+            $document_id = rand(MIN_RANDOM, MAX_RANDOM);
             $userData = $userTable->findByDocumentId($document_id);
-            if($userData->count() == 0){break;}
+            if ($userData->count() == 0) {
+                break;
+            }
         }
 
         return $document_id;
@@ -321,9 +325,9 @@ class UsersController extends ReaxiumAPIController
         $userRelationShipTable = TableRegistry::get("UsersRelationship");
         $userStakeHolderData = $this->createAUser($userJSON);
         $stakeholderId = null;
-        if(isset($userJSON['Users']['stakeholder_id'])){
+        if (isset($userJSON['Users']['stakeholder_id'])) {
             $stakeholderId = $userJSON['Users']['stakeholder_id'];
-            $userRelationShipTable->deleteAll(array('stakeholder_id'=>$stakeholderId));
+            $userRelationShipTable->deleteAll(array('stakeholder_id' => $stakeholderId));
         }
         $resultRelationship = array();
         if (!isset($stakeholderId)) {
@@ -516,12 +520,12 @@ class UsersController extends ReaxiumAPIController
                     if (isset($user->user_id)) {
 
                         $arrayOfConditions = isset($user->business_id) ?
-                            array('user_id' => $user->user_id,'Users.business_id'=>$user->business_id) : array('user_id' => $user->user_id);
+                            array('user_id' => $user->user_id, 'Users.business_id' => $user->business_id) : array('user_id' => $user->user_id);
 
                     } else if (isset($user->document_id)) {
 
                         $arrayOfConditions = isset($user->business_id) ?
-                            array('document_id' => $user->document_id,'Users.business_id'=> $user->business_id) : array('document_id' => $user->document_id);
+                            array('document_id' => $user->document_id, 'Users.business_id' => $user->business_id) : array('document_id' => $user->document_id);
 
                     } else {
                         $failure = true;
@@ -568,7 +572,7 @@ class UsersController extends ReaxiumAPIController
     private function getUserInfo($arrayConditions)
     {
         $usersTable = TableRegistry::get("Users");
-        $user = $usersTable->find()->where($arrayConditions)->contain(array("Status", "PhoneNumbers", "UserType", "Address","Business"));
+        $user = $usersTable->find()->where($arrayConditions)->contain(array("Status", "PhoneNumbers", "UserType", "Address", "Business"));
         if ($user->count() > 0) {
             $user = $user->toArray();
         } else {
@@ -622,10 +626,10 @@ class UsersController extends ReaxiumAPIController
 
     private function getStakeHolderId($userId)
     {
-        $stakeholderId  = null;
+        $stakeholderId = null;
         $stakeholderTable = TableRegistry::get("Stakeholders");
         $stakeholder = $stakeholderTable->findByUserId($userId);
-        if ($stakeholder->count() > 0){
+        if ($stakeholder->count() > 0) {
             $stakeholder = $stakeholder->toArray();
             $stakeholderId = $stakeholder[0]['stakeholder_id'];
         }
@@ -802,14 +806,13 @@ class UsersController extends ReaxiumAPIController
 
                     $userTypeId = !isset($jsonObject['ReaxiumParameters']["user_type_id"]) ? null : $jsonObject['ReaxiumParameters']["user_type_id"];
 
-                    if(isset($userTypeId) && $userTypeId == CALL_CENTER){
-                        $andCondition = array('Users.status_id' => 1,array('NOT'=>array('Users.user_type_id'=>1)));
-                    }
-                    elseif(isset($userTypeId) && $userTypeId == ADMIN_SCHOOL){
+                    if (isset($userTypeId) && $userTypeId == CALL_CENTER) {
+                        $andCondition = array('Users.status_id' => 1, array('NOT' => array('Users.user_type_id' => 1)));
+                    } elseif (isset($userTypeId) && $userTypeId == ADMIN_SCHOOL) {
 
                         $business_id = !isset($jsonObject['ReaxiumParameters']["business_id"]) ? null : $jsonObject['ReaxiumParameters']["business_id"];
-                        $andCondition = isset($business_id) ? array('Users.status_id' => 1,'Users.business_id'=>$business_id) : array('Users.status_id' => 1);
-                    }else{
+                        $andCondition = isset($business_id) ? array('Users.status_id' => 1, 'Users.business_id' => $business_id) : array('Users.status_id' => 1);
+                    } else {
                         $andCondition = array('Users.status_id' => 1);
                     }
 
@@ -926,14 +929,13 @@ class UsersController extends ReaxiumAPIController
 
                     $userTypeId = !isset($jsonObject['ReaxiumParameters']["Users"]["user_type_id"]) ? null : $jsonObject['ReaxiumParameters']["Users"]["user_type_id"];
 
-                    if(isset($userTypeId) && $userTypeId == CALL_CENTER){
-                        $andCondition = array('Users.status_id' => 1,array('NOT'=>array('Users.user_type_id'=>1)));
-                    }
-                    elseif(isset($userTypeId) && $userTypeId == ADMIN_SCHOOL){
+                    if (isset($userTypeId) && $userTypeId == CALL_CENTER) {
+                        $andCondition = array('Users.status_id' => 1, array('NOT' => array('Users.user_type_id' => 1)));
+                    } elseif (isset($userTypeId) && $userTypeId == ADMIN_SCHOOL) {
 
                         $business_id = !isset($jsonObject['ReaxiumParameters']['Users']["business_id"]) ? null : $jsonObject['ReaxiumParameters']['Users']["business_id"];
-                        $andCondition = isset($business_id) ? array('Users.status_id' => 1,'Users.business_id'=>$business_id) : array('Users.status_id' => 1);
-                    }else{
+                        $andCondition = isset($business_id) ? array('Users.status_id' => 1, 'Users.business_id' => $business_id) : array('Users.status_id' => 1);
+                    } else {
                         $andCondition = array('Users.status_id' => 1);
                     }
 
@@ -941,7 +943,7 @@ class UsersController extends ReaxiumAPIController
                     $userFound = $userTable->find()
                         ->where($whereCondition)
                         ->andWhere($andCondition)
-                        ->contain(array('UserType','Business'))
+                        ->contain(array('UserType', 'Business'))
                         ->order(array('first_name', 'first_last_name'));
 
                     if ($userFound->count() > 0) {
@@ -1174,83 +1176,79 @@ class UsersController extends ReaxiumAPIController
     /**
      * Service for get type user
      */
-    public function usersTypeList(){
+    public function usersTypeList()
+    {
 
         Log::info("Looking for the users type list ");
         parent::setResultAsAJson();
         parent::setResultAsAJson();
         $response = parent::getDefaultReaxiumMessage();
         $jsonObject = parent::getJsonReceived();
-        $arrayTypeUsers=[];
+        $arrayTypeUsers = [];
 
-        if(parent::validReaxiumJsonHeader($jsonObject)){
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
 
             $user_type_id = !isset($jsonObject['ReaxiumParameters']['Users']['user_type_id']) ? null : $jsonObject['ReaxiumParameters']['Users']['user_type_id'];
 
-            try{
+            try {
 
-                if(isset($user_type_id)){
+                if (isset($user_type_id)) {
 
                     $arrayAux = $this->getTypeUsersList();
 
-                    foreach($arrayAux as $entry){
+                    foreach ($arrayAux as $entry) {
 
-                        if($user_type_id == 5){
+                        if ($user_type_id == 5) {
 
-                            switch($entry['user_type_id']){
+                            switch ($entry['user_type_id']) {
                                 case 2:
-                                    array_push($arrayTypeUsers,$entry);
+                                    array_push($arrayTypeUsers, $entry);
                                     break;
                                 case 3:
-                                    array_push($arrayTypeUsers,$entry);
+                                    array_push($arrayTypeUsers, $entry);
                                     break;
                                 case 4:
-                                    array_push($arrayTypeUsers,$entry);
+                                    array_push($arrayTypeUsers, $entry);
                                     break;
                                 case 5:
-                                    array_push($arrayTypeUsers,$entry);
+                                    array_push($arrayTypeUsers, $entry);
                                     break;
                             }
-                        }
-                        elseif($user_type_id == 6){
+                        } elseif ($user_type_id == 6) {
 
-                            switch($entry['user_type_id']){
+                            switch ($entry['user_type_id']) {
                                 case 2:
-                                    array_push($arrayTypeUsers,$entry);
+                                    array_push($arrayTypeUsers, $entry);
                                     break;
                                 case 3:
-                                    array_push($arrayTypeUsers,$entry);
+                                    array_push($arrayTypeUsers, $entry);
                                     break;
                                 case 4:
-                                    array_push($arrayTypeUsers,$entry);
+                                    array_push($arrayTypeUsers, $entry);
                                     break;
                                 case 5:
-                                    array_push($arrayTypeUsers,$entry);
+                                    array_push($arrayTypeUsers, $entry);
                                     break;
                                 case 6:
-                                    array_push($arrayTypeUsers,$entry);
+                                    array_push($arrayTypeUsers, $entry);
                                     break;
                             }
 
-                        }
-                        elseif($user_type_id == 1){
+                        } elseif ($user_type_id == 1) {
 
-                            array_push($arrayTypeUsers,$entry);
+                            array_push($arrayTypeUsers, $entry);
                         }
 
                     }
-                }
-                else{
+                } else {
                     $response = parent::seInvalidParametersMessage($response);
                 }
 
-            }
-            catch(\Exception $e){
+            } catch (\Exception $e) {
                 Log::info($e->getMessage());
                 $response = parent::setInternalServiceError($response);
             }
-        }
-        else{
+        } else {
             $response = parent::seInvalidParametersMessage($response);
         }
 
@@ -1398,6 +1396,54 @@ class UsersController extends ReaxiumAPIController
             $response = parent::seInvalidParametersMessage($response);
         }
         $this->response->body(json_encode($response));
+    }
+
+
+    public function getUserBusinessInformation()
+    {
+        parent::setResultAsAJson();
+        $result = parent::getDefaultReaxiumMessage();
+        $jsonObjectReceived = parent::getJsonReceived();
+        Log::info("Parameter Received:");
+        Log::info(json_encode($jsonObjectReceived));
+        try {
+            if (isset($jsonObjectReceived['ReaxiumParameters']['UserBusinessInfo'])) {
+                $arrayOfParametersToValidate = array('user_id');
+                $validation = ReaxiumUtil::validateParameters($arrayOfParametersToValidate, $jsonObjectReceived['ReaxiumParameters']['UserBusinessInfo']);
+                if ($validation['code'] == '0') {
+
+                    $useID = $jsonObjectReceived['ReaxiumParameters']['UserBusinessInfo']['user_id'];
+
+                    //validate if the access exist
+                    $stopUsersTable = TableRegistry::get("StopsUsers");
+                    $stopUsersData = $stopUsersTable->find('all', array('conditions' => array('user_id' => $useID)))->contain(array('Stops', 'Routes'));
+
+                    if ($stopUsersData->count() > 0) {
+
+                        $stopUsersData = $stopUsersData->toArray();;
+                        $result['ReaxiumResponse']['code'] = ReaxiumApiMessages::$SUCCESS_CODE;
+                        $result['ReaxiumResponse']['message'] = ReaxiumApiMessages::$SUCCESS_MESSAGE;
+                        $result['ReaxiumResponse']['object'] = $stopUsersData;
+
+                    } else {
+                        $result['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                        $result['ReaxiumResponse']['message'] = 'The Student has no stops assigned';
+                    }
+                } else {
+                    $result['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_PARAMETERS_CODE;
+                    $result['ReaxiumResponse']['message'] = $validation['message'];
+                }
+
+            } else {
+                $result = parent::seInvalidParametersMessage($result);
+            }
+        } catch (\Exception $e) {
+            $result = parent::setInternalServiceError($result);
+            Log::info("Error executing a looking for routes and stop user information" . $e->getMessage());
+        }
+
+        Log::info("Response Object: " . json_encode($result));
+        $this->response->body(json_encode($result));
     }
 
 

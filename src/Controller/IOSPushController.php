@@ -10,12 +10,13 @@
  */
 namespace App\Controller;
 
+use Cake\Core\Exception\Exception;
 use Cake\Log\Log;
 
 define("IOS_APNS_SANDBOX", "ssl://gateway.sandbox.push.apple.com:2195");
 define("IOS_APNS", "ssl://gateway.push.apple.com:2195");
-define("IOS_SERVICE_CERTIFICATE", "/var/www/html/app/ck.pem");
-define("IOS_CERTIFICATE_PASS_PHRASE", "teravision");
+define("IOS_SERVICE_CERTIFICATE", "/var/www/html/reaxium/reaxiumCert.pem");
+define("IOS_CERTIFICATE_PASS_PHRASE", "reaxium*t4ss/");
 
 class IOSPushController extends AppController
 {
@@ -101,26 +102,32 @@ class IOSPushController extends AppController
      */
     public static function bulkSendIOSNotification($arrayOfMessages)
     {
-        if(sizeof($arrayOfMessages) > 0){
-            $apnsConnection = stream_context_create();
-            stream_context_set_option($apnsConnection, 'ssl', 'local_cert', IOSPushController::$apnsDataSandbox['certificate']);
-            stream_context_set_option($apnsConnection, 'ssl', 'passphrase', IOS_CERTIFICATE_PASS_PHRASE);
-            $apnSocketClient = stream_socket_client(IOSPushController::$apnsDataSandbox['ssl'], $error, $errorString, 60, STREAM_CLIENT_CONNECT, $apnsConnection);
-            if ($apnSocketClient) {
-                foreach ($arrayOfMessages as $message) {
-                    $pushMessage = chr(0) . pack('n', 32) . pack('H*', $message['deviceId']) . pack('n', strlen(self::getIOSMessage($message['message']))) .self::getIOSMessage($message['message']);
-                    $result = fwrite($apnSocketClient, $pushMessage, strlen($pushMessage));
-                    if ($result) {
-                        Log::info("Notificacion push enviada con exito Error Code:  " . $error . "  Error Message: " . $errorString . " " . PHP_EOL);
-                    } else {
-                        Log::error("ERROR enviando la notificacion push: " . $error . " " . $errorString . " " . PHP_EOL);
+        try{
+            if(sizeof($arrayOfMessages) > 0){
+                $apnsConnection = stream_context_create();
+                stream_context_set_option($apnsConnection, 'ssl', 'local_cert', IOSPushController::$apnsDataSandbox['certificate']);
+                stream_context_set_option($apnsConnection, 'ssl', 'passphrase', IOS_CERTIFICATE_PASS_PHRASE);
+                $apnSocketClient = stream_socket_client(IOSPushController::$apnsDataSandbox['ssl'], $error, $errorString, 60, STREAM_CLIENT_CONNECT, $apnsConnection);
+                if ($apnSocketClient) {
+                    foreach ($arrayOfMessages as $message) {
+                        Log::info(self::getIOSMessage($message['message']));
+                        $pushMessage = chr(0) . pack('n', 32) . pack('H*', $message['deviceId']) . pack('n', strlen(self::getIOSMessage($message['message']))) .self::getIOSMessage($message['message']);
+                        $result = fwrite($apnSocketClient, $pushMessage, strlen($pushMessage));
+                        if ($result) {
+                            Log::info("Notificacion push enviada con exito Error Code:  " . $error . "  Error Message: " . $errorString . " " . PHP_EOL);
+                        } else {
+                            Log::info("ERROR enviando la notificacion push: " . $error . " " . $errorString . " " . PHP_EOL);
+                        }
                     }
+                    fclose($apnSocketClient);
+                } else {
+                    Log::info("No se pudo realizar la conexion contra el servidor APNS " . $error . " " . $errorString . " " . PHP_EOL);
                 }
-                fclose($apnSocketClient);
-            } else {
-                Log::info("No se pudo realizar la conexion contra el servidor APNS " . $error . " " . $errorString . " " . PHP_EOL);
             }
+        }catch (\Exception $e){
+            Log::info("error enviando notificacion push: ".$e->getMessage());
         }
+
     }
 
 
