@@ -446,6 +446,7 @@ class StopsController extends ReaxiumAPIController
                             $stopsUserData = $stopsUserTable->newEntity();
                             $stopsUserData->id_stop = $entity['id_stop'];
                             $stopsUserData->user_id = $entity['user_id'];
+                            $stopsUserData->id_route = $entity['id_route'];
                             $stopsUserData->start_time = $entity['start_time'];
                             $stopsUserData->end_time = $entity['end_time'];
 
@@ -480,6 +481,62 @@ class StopsController extends ReaxiumAPIController
         Log::info(json_encode($response));
         $this->response->body(json_encode($response));
     }
+
+
+
+    public function associationStopsWithRoute(){
+
+        Log::info("Get association Stop And Route");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+
+
+        if(parent::validReaxiumJsonHeader($jsonObject)){
+
+            try{
+
+                $stop_id = !isset($jsonObject['ReaxiumParameters']['ReaxiumStops']['stop_id']) ?
+                    null : $jsonObject['ReaxiumParameters']['ReaxiumStops']['stop_id'];
+
+                if(isset($stop_id)){
+
+                    $stopsRouteTable = TableRegistry::get("RoutesStopsRelationship");
+                    $stopRouteDate = $stopsRouteTable->findByIdStop($stop_id)->contain(array("Routes"));
+
+                    if($stopRouteDate->count() > 0){
+                        $stopRouteDate = $stopRouteDate->toArray();
+                    }else{
+                        $stopRouteDate = null;
+                    }
+
+                    if(isset($stopRouteDate)){
+                        $response = parent::setSuccessfulResponse($response);
+                        $response['ReaxiumResponse']['object'] = $stopRouteDate;
+                    }else{
+                        $response['ReaxiumResponse']['code'] = '1';
+                        $response['ReaxiumResponse']['message'] = 'This stop has not associated routes, please stop relate to a route.';
+                    }
+                }
+                else{
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+
+            }
+            catch(\Exception $e){
+                Log::info('Error create relation stops users: ' . $e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+        }
+        else{
+            $response = parent::seInvalidParametersMessage($response);
+        }
+
+        Log::info(json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
+
 
     /**
      * @param $stopsUserTable
@@ -788,13 +845,14 @@ class StopsController extends ReaxiumAPIController
 
                     foreach($objUser as $user){
 
-                        $stopsUsersData = $stopsUserTable->findByUserId($user['user_id'])->contain(array('Stops'));
+                        $stopsUsersData = $stopsUserTable->findByUserId($user['user_id'])->contain(array('Stops','Routes'));
 
                         if($stopsUsersData->count() > 0){
 
                             $routeByStopsTable = TableRegistry::get("RoutesStopsRelationship");
 
                             $stopsUsersData = $stopsUsersData->toArray();
+                            Log::info(json_encode($stopsUsersData));
 
                             foreach($stopsUsersData as $stops){
 
@@ -804,26 +862,7 @@ class StopsController extends ReaxiumAPIController
                                 $entityStops->stop_number = $stops['stop']['stop_number'];
                                 $entityStops->stop_name = $stops['stop']['stop_name'];
                                 $entityStops->stop_address = $stops['stop']['stop_address'];
-
-                                $routeByStopsData = $routeByStopsTable->findByIdStop($stops['id_stop'])
-                                    ->select(array("Routes.id_route",
-                                        "Routes.route_number",
-                                        "Routes.route_name",
-                                        "Routes.route_address",
-                                        "Routes.route_type"))
-                                    ->contain(array('Routes'));
-
-                                if($routeByStopsData->count() > 0){
-
-                                    $routeByStopsData = $routeByStopsData->toArray();
-                                    $entityStops->routes = $routeByStopsData;
-
-                                }
-                                else{
-                                    Log::info("No existe Rutas asociada a la parada: ".$stops['id_stop']);
-                                    $entityStops->routes=[];
-
-                                }
+                                $entityStops->routes = $stops['route'];
 
                                 array_push($response['ReaxiumResponse']['object'],$entityStops);
                             }
