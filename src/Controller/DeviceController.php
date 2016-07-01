@@ -849,6 +849,7 @@ class DeviceController extends ReaxiumAPIController
                     if (isset($deviceId) && isset($deviceToken)) {
                         $reaxiumDevice = $this->getDeviceInfo($deviceId);
                         if (isset($reaxiumDevice)) {
+
                             if ($reaxiumDevice[0]['device_serial'] == $deviceSerial) {
 
                                 $fields = array('configured' => 1, 'device_token' => $deviceToken);
@@ -864,7 +865,7 @@ class DeviceController extends ReaxiumAPIController
 
                             } else {
                                 $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$DEVICE_ALREADY_CONFIGURED_CODE;
-                                $response['ReaxiumResponse']['message'] = 'No matching serial number: '.$deviceSerial.' with device ID'.$deviceId;
+                                $response['ReaxiumResponse']['message'] = 'The ID you have entered doesn\'t match the serial number of the device in our records, please contact a system administrator';
                             }
                         } else {
                             $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;

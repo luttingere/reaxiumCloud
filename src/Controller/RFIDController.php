@@ -20,6 +20,100 @@ class RFIDController extends ReaxiumAPIController
 {
 
 
+    public function lookupIfIsAvailableRFIDCard()
+    {
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $object = parent::getJsonReceived();
+        Log::info("Object Received:");
+        Log::info(json_encode($object));
+        try {
+            if (parent::validReaxiumJsonHeader($object)) {
+                if (isset($object['ReaxiumParameters']['RFIDValidation'])) {
+
+                    $arrayToTest = array('rfid_code');
+                    $validationResult = ReaxiumUtil::validateParameters($arrayToTest, $object['ReaxiumParameters']['RFIDValidation']);
+                    if ($validationResult['code'] == '0') {
+                        $rfidCode = $object['ReaxiumParameters']['RFIDValidation']['rfid_code'];
+                        $userAccessDataTable = TableRegistry::get("UserAccessData");
+                        $accessData = $userAccessDataTable->find('all', array(
+                            'fields' => array(
+                                'user_id'),
+                            'conditions' => array('rfid_code' => $rfidCode)));
+                        if ($accessData->count() > 0) {
+
+                            $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$USER_ALREADY_REGISTERED_CODE;
+                            $response['ReaxiumResponse']['message'] = 'Card id number already configured.';
+
+                        } else {
+
+                            $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$SUCCESS_CODE;
+                            $response['ReaxiumResponse']['message'] = 'Card number available';
+
+                        }
+                    } else {
+                        $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_PARAMETERS_CODE;
+                        $response['ReaxiumResponse']['message'] = $validationResult['message'];
+
+                    }
+                } else {
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+            } else {
+                $response = parent::setInvalidJsonHeader($response);
+            }
+        } catch (\Exception $e) {
+            $response = parent::setInternalServiceError($response);
+            Log::info("Error validando el RFID: " . $e->getMessage());
+        }
+        Log::info("Response:");
+        Log::info(json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
+
+    public function resetAnRfidCardFromSystem()
+    {
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $object = parent::getJsonReceived();
+        Log::info("Object Received:");
+        Log::info(json_encode($object));
+        try {
+            if (parent::validReaxiumJsonHeader($object)) {
+                if (isset($object['ReaxiumParameters']['RFIDValidation'])) {
+
+                    $arrayToTest = array('rfid_code');
+                    $validationResult = ReaxiumUtil::validateParameters($arrayToTest, $object['ReaxiumParameters']['RFIDValidation']);
+                    if ($validationResult['code'] == '0') {
+
+                        $rfidCode = $object['ReaxiumParameters']['RFIDValidation']['rfid_code'];
+                        $userAccessDataTable = TableRegistry::get("UserAccessData");
+                        $userAccessDataTable->updateAll(array('rfid_code' => null), array('rfid_code' => $rfidCode));
+
+                        $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$SUCCESS_CODE;
+                        $response['ReaxiumResponse']['message'] = 'RFID Card successfully restored ';
+
+                    } else {
+                        $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_PARAMETERS_CODE;
+                        $response['ReaxiumResponse']['message'] = $validationResult['message'];
+                    }
+                } else {
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+            } else {
+                $response = parent::setInvalidJsonHeader($response);
+            }
+        } catch (\Exception $e) {
+            $response = parent::setInternalServiceError($response);
+            Log::info("Error validando el RFID: " . $e->getMessage());
+        }
+        Log::info("Response:");
+        Log::info(json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
+
     public function validateRFIDCard()
     {
         parent::setResultAsAJson();

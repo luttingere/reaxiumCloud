@@ -196,7 +196,7 @@ class UserAccessController extends ReaxiumAPIController
                         }
                     } else {
                         $result['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_USER_ACCESS_CODE;
-                        $result['ReaxiumResponse']['message'] = 'Invalid User';
+                        $result['ReaxiumResponse']['message'] = 'The username that you\'ve entered doesn\'t match any account.';
                     }
 
                 } else {

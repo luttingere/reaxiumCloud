@@ -82,8 +82,14 @@ class AlarmController extends ReaxiumAPIController
 
 
                         try{AndroidPushController::sendBulkPush($notification['bulkAndroid']);}catch(\Exception $e){Log::info("Error enviando notification push ANDROID".$e->getMessage());}
-//                        try{IOSPushController::bulkSendIOSNotification($notification['bulkIOS']);}catch(\Exception $e){Log::info("Error enviando notification push IOS".$e->getMessage());}
 
+                        try{
+                            IOSPushController::bulkSendIOSNotification($notification['bulkIOS']);
+                        }catch(\Exception $e){
+                            Log::info("Error enviando notification push IOS".$e->getMessage());
+                        }catch(Exception $e2){
+                            Log::info("Error enviando notification push IOS".$e2->getMessage());
+                        }
 
                         $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$SUCCESS_CODE;
                         $response['ReaxiumResponse']['message'] = 'Notification sent successfully';

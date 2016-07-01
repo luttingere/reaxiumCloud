@@ -11,6 +11,7 @@ namespace App\Controller;
 use Cake\Log\Log;
 use Cake\ORM\TableRegistry;
 use App\Util\ReaxiumApiMessages;
+use App\Util\ReaxiumUtil;
 
 
 define("BIOMETRIC_FILE_PATH", "/reaxium_user_images/biometric_user_images/");
@@ -568,7 +569,7 @@ class UsersController extends ReaxiumAPIController
     private function getUserInfo($arrayConditions)
     {
         $usersTable = TableRegistry::get("Users");
-        $user = $usersTable->find()->where($arrayConditions)->contain(array("Status", "PhoneNumbers", "UserType", "Address","Business"));
+        $user = $usersTable->find()->where($arrayConditions)->contain(array("Status", "PhoneNumbers", "UserType", "Address", "Business"));
         if ($user->count() > 0) {
             $user = $user->toArray();
         } else {
@@ -622,10 +623,10 @@ class UsersController extends ReaxiumAPIController
 
     private function getStakeHolderId($userId)
     {
-        $stakeholderId  = null;
+        $stakeholderId = null;
         $stakeholderTable = TableRegistry::get("Stakeholders");
         $stakeholder = $stakeholderTable->findByUserId($userId);
-        if ($stakeholder->count() > 0){
+        if ($stakeholder->count() > 0) {
             $stakeholder = $stakeholder->toArray();
             $stakeholderId = $stakeholder[0]['stakeholder_id'];
         }
@@ -1447,6 +1448,54 @@ class UsersController extends ReaxiumAPIController
             $response = parent::seInvalidParametersMessage($response);
         }
         $this->response->body(json_encode($response));
+    }
+
+
+    public function getUserBusinessInformation()
+    {
+        parent::setResultAsAJson();
+        $result = parent::getDefaultReaxiumMessage();
+        $jsonObjectReceived = parent::getJsonReceived();
+        Log::info("Parameter Received:");
+        Log::info(json_encode($jsonObjectReceived));
+        try {
+            if (isset($jsonObjectReceived['ReaxiumParameters']['UserBusinessInfo'])) {
+                $arrayOfParametersToValidate = array('user_id');
+                $validation = ReaxiumUtil::validateParameters($arrayOfParametersToValidate, $jsonObjectReceived['ReaxiumParameters']['UserBusinessInfo']);
+                if ($validation['code'] == '0') {
+
+                    $useID = $jsonObjectReceived['ReaxiumParameters']['UserBusinessInfo']['user_id'];
+
+                    //validate if the access exist
+                    $stopUsersTable = TableRegistry::get("StopsUsers");
+                    $stopUsersData = $stopUsersTable->find('all', array('conditions' => array('user_id' => $useID)))->contain(array('Stops', 'Routes'));
+
+                    if ($stopUsersData->count() > 0) {
+
+                        $stopUsersData = $stopUsersData->toArray();;
+                        $result['ReaxiumResponse']['code'] = ReaxiumApiMessages::$SUCCESS_CODE;
+                        $result['ReaxiumResponse']['message'] = ReaxiumApiMessages::$SUCCESS_MESSAGE;
+                        $result['ReaxiumResponse']['object'] = $stopUsersData;
+
+                    } else {
+                        $result['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                        $result['ReaxiumResponse']['message'] = 'The Student has no stops assigned';
+                    }
+                } else {
+                    $result['ReaxiumResponse']['code'] = ReaxiumApiMessages::$INVALID_PARAMETERS_CODE;
+                    $result['ReaxiumResponse']['message'] = $validation['message'];
+                }
+
+            } else {
+                $result = parent::seInvalidParametersMessage($result);
+            }
+        } catch (\Exception $e) {
+            $result = parent::setInternalServiceError($result);
+            Log::info("Error executing a looking for routes and stop user information" . $e->getMessage());
+        }
+
+        Log::info("Response Object: " . json_encode($result));
+        $this->response->body(json_encode($result));
     }
 
 
