@@ -343,14 +343,44 @@ class BusinessController extends ReaxiumAPIController
             $whereCondition = array(array('OR' => array(
                 array('business_name LIKE' => '%' . $filter . '%'),
                 array('business_id_number LIKE' => '%' . $filter . '%')
-            )), 'Business.status_id' => '1');
+            )), array('OR'=>array(
+                array('Business.status_id' => '1'),
+                array('Business.status_id' => '2'),
+            )));
             $AllBusinessObject = $businessTable->find()->where($whereCondition)->order(array($sortedBy . ' ' . $sortDir))->contain(array('Status'));
         } else {
-            $whereCondition = array('Business.status_id' => '1');
+            $whereCondition = array(
+                'OR'=>array(
+                    array('Business.status_id' => '1'),
+                    array('Business.status_id' => '2')
+                ));
             $AllBusinessObject = $businessTable->find()->where($whereCondition)->order(array($sortedBy . ' ' . $sortDir))->contain(array('Status'));
         }
         return $AllBusinessObject;
     }
+
+
+    /**
+     * obtain all business registered in the reaxium cloud
+     * @param $filter
+     * @param $sortedBy
+     * @param $sortDir
+     * @return $this|null
+     */
+    private function lookUpAllBusinessFilter($filter, $sortedBy, $sortDir)
+    {
+        $businessTable = TableRegistry::get("Business");
+        $AllBusinessObject = null;
+
+            $whereCondition = array(array('OR' => array(
+                array('business_name LIKE' => '%' . $filter . '%'),
+                array('business_id_number LIKE' => '%' . $filter . '%')
+            )), 'Business.status_id' => '1');
+            $AllBusinessObject = $businessTable->find()->where($whereCondition)->order(array($sortedBy . ' ' . $sortDir))->contain(array('Status'));
+
+        return $AllBusinessObject;
+    }
+
 
 
     /**
@@ -529,7 +559,8 @@ class BusinessController extends ReaxiumAPIController
                     $sortedBy = "business_name";
                     $sortDir = "desc";
                     $filter = $jsonObject['ReaxiumParameters']["Business"]["filter"];
-                    $businessFound = $this->lookUpAllBusiness($filter, $sortedBy, $sortDir);
+                    $businessFound = $this->lookUpAllBusinessFilter($filter, $sortedBy, $sortDir);
+
                     if ($businessFound->count() > 0) {
                         $businessFound = $businessFound->toArray();
                         $response = parent::setSuccessfulResponse($response);
@@ -563,7 +594,11 @@ class BusinessController extends ReaxiumAPIController
     private function lookupABusinessByID($businessId)
     {
         $businessTable = TableRegistry::get("Business");
-        $whereCondition = array('business_id' => $businessId, 'Business.status_id' => '1');
+        $whereCondition = array('business_id' => $businessId,
+            array('OR'=>array(
+                array('Business.status_id' => '1'),
+                array('Business.status_id' => '2')))
+            );
         $businessObject = $businessTable->find()->where($whereCondition)->contain(array('Status', 'Address', 'PhoneNumbers'));
         if ($businessObject->count() > 0) {
             $businessObject = $businessObject->toArray();
