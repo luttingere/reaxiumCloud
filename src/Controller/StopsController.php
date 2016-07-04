@@ -847,11 +847,13 @@ class StopsController extends ReaxiumAPIController
 
                     foreach($objUser as $user){
 
-                        $stopsUsersData = $stopsUserTable->findByUserId($user['user_id'])->contain(array('Stops','Routes'));
+                        $stopsUsersData = $stopsUserTable->findByUserId($user['user_id'])
+                            ->andWhere(array('Stops.status_id' => 1))
+                            ->contain(array('Stops','Routes'));
 
                         if($stopsUsersData->count() > 0){
 
-                            $routeByStopsTable = TableRegistry::get("RoutesStopsRelationship");
+                            //$routeByStopsTable = TableRegistry::get("RoutesStopsRelationship");
 
                             $stopsUsersData = $stopsUsersData->toArray();
                             Log::info(json_encode($stopsUsersData));
