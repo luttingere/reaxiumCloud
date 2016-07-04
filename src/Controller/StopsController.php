@@ -502,7 +502,9 @@ class StopsController extends ReaxiumAPIController
                 if(isset($stop_id)){
 
                     $stopsRouteTable = TableRegistry::get("RoutesStopsRelationship");
-                    $stopRouteDate = $stopsRouteTable->findByIdStop($stop_id)->contain(array("Routes"));
+                    $stopRouteDate = $stopsRouteTable->findByIdStop($stop_id)
+                        ->contain(array("Routes"))
+                        ->andWhere(array("Routes.status_id"=>1));
 
                     if($stopRouteDate->count() > 0){
                         $stopRouteDate = $stopRouteDate->toArray();
@@ -897,4 +899,5 @@ class StopsController extends ReaxiumAPIController
         Log::info(json_encode($response));
         $this->response->body(json_encode($response));
     }
+
 }
