@@ -49,7 +49,7 @@ class ReaxiumApiMessages
     public static $USER_ALREADY_REGISTERED_MESSAGE = 'User already registered with the same document id';
 
     public static $ERROR_CREATING_A_BUSINESS_CODE = 12;
-    public static $ERROR_CREATING_A_BUSINESS_MESSAGE = 'Error creating the user, see error log';
+    public static $ERROR_CREATING_A_BUSINESS_MESSAGE = 'The school ID is already in use, please choose another one.';
 
     public static $GENERAL_ERROR_CODE = 13;
 
