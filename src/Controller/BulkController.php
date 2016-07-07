@@ -13,16 +13,27 @@ use Cake\Log\Log;
 use Cake\ORM\TableRegistry;
 use App\Util\ReaxiumApiMessages;
 
+
 //PATH PRODUCCION
 //define('PATH_DIRECTORY', '../../reaxium_reports/');
 //PATH DESARROLLO
 define('PATH_DIRECTORY', '../../reports_school/');
 define('DEFAULT_URL_PHOTO_USER', 'http://54.200.133.84/reaxium_user_images/profile-default.png');
+define("TYPE_USER_ADMIN",1);
 define("TYPE_USER_STUDENT",2);
 define("TYPE_USER_STAKEHOLDER",3);
+define("TYPE_USER_DRIVER",4);
+define("TYPE_USER_ADMIN_SCHOOL",5);
+define("TYPE_USER_ADMIN_CALL_CENTER",6);
 define("TYPE_ACCESS_DOCUMENT_ID",4);
 define("MIN_RANDOM",10000000);
 define("MAX_RANDOM",99999999);
+define ("MAX_COLUMN_CSV_USERS",12);
+define("MAX_COLUMN_CSV_STOPS",3);
+define("MAX_COLUMN_CSV_SCHOOL",6);
+define("REPORT_USERS",1);
+define("REPORT_SCHOOL",2);
+define("REPORT_STOPS",3);
 class BulkController extends ReaxiumAPIController{
 
 
@@ -84,20 +95,24 @@ class BulkController extends ReaxiumAPIController{
                     if (file_exists($path)) {
 
                         //Leer archivo ccv
-                        $csv = $this->readCSV($path, ';');
+                        $csv = $this->readCSV($path,$name_file,REPORT_USERS);
+
+                        Log::info(json_encode($csv));
+
                         $usersTable = TableRegistry::get("Users");
                         $phoneTable = TableRegistry::get("PhoneNumbers");
                         $addressTable = TableRegistry::get("Address");
                         $userAccessTable = TableRegistry::get("UserAccessData");
 
-                        $validate = true;
+                        $validate = false;
                         $messageError = array('code' => 0, 'message' => '');
 
                         if (count($csv) > 0) {
 
                             //recorre cada row del arreglo csv
-                            for ($i = 1; $i < count($csv); $i++) {
+                            for ($i = 0; $i < count($csv); $i++) {
 
+                                $lineaFile = $i+1;
                                 $documentId = empty(trim($csv[$i][0])) ? null : trim($csv[$i][0]);
                                 $firstName = empty(trim($csv[$i][1])) ? null : trim($csv[$i][1]);
                                 $middleName = empty(trim($csv[$i][2])) ? null : trim($csv[$i][2]);
@@ -107,10 +122,9 @@ class BulkController extends ReaxiumAPIController{
                                 $phoneOffice = empty(trim($csv[$i][6])) ? null : trim($csv[$i][6]);
                                 $phoneOther = empty(trim($csv[$i][7])) ? null : trim($csv[$i][7]);
                                 $businessNumber = empty(trim($csv[$i][8])) ? null : trim($csv[$i][8]);
-                                $typeUser = empty(trim($csv[$i][10])) ? null : trim($csv[$i][10]);
-                                $userAddress = empty($csv[$i][11]) ? null : $csv[$i][11];
-                                $emailUser = empty(trim($csv[$i][12])) ? null : trim($csv[$i][12]);
-                                $documentIdSForParents = empty(trim($csv[$i][13])) ? null : trim($csv[$i][13]);
+                                $typeUser = empty(trim($csv[$i][9])) ? null : trim($csv[$i][9]);
+                                $emailUser = empty(trim($csv[$i][10])) ? null : trim($csv[$i][10]);
+                                $documentIdSForParents = empty(trim($csv[$i][11])) ? null : trim($csv[$i][11]);
 
 
                                 if (isset($documentId) && isset($firstName)
@@ -132,7 +146,8 @@ class BulkController extends ReaxiumAPIController{
                                     else {
 
                                         $messageError['code'] = 2;
-                                        $messageError['message'] = 'User type is invalid in row: ' . $i;
+                                        $messageError['message'] = "User type ".$typeUser." is invalid in line: ".$lineaFile;
+                                        $validate=false;
                                         break;
                                     }
 
@@ -143,9 +158,9 @@ class BulkController extends ReaxiumAPIController{
                                         $entityUser->business_id = $business[0]['business_id'];
                                     }
                                     else {
-
                                         $messageError['code'] = 1;
-                                        $messageError['message'] = 'business number is invalid in row: ' . $i;
+                                        $messageError['message'] = "Business number ".$businessNumber." is invalid in line: ".$lineaFile;
+                                        $validate=false;
                                         break;
                                     }
 
@@ -160,17 +175,53 @@ class BulkController extends ReaxiumAPIController{
                                         }
                                         else{
                                             $messageError['code'] = 3;
-                                            $messageError['message'] = 'field of relationship parents and students is empty: ' . $i;
+                                            $messageError['message'] = 'field of relationship parents and students is empty: ' . $lineaFile;
+                                            $validate=false;
                                             break;
                                         }
-
+                                    }
+                                    else if($entityUser->user_type_id == TYPE_USER_DRIVER){
+                                        $entityUser->document_id = $this->findAndGenerateDocumentId();
+                                    }
+                                    else if($entityUser->user_type_id == TYPE_USER_ADMIN){
+                                        $entityUser->document_id = $this->findAndGenerateDocumentId();
+                                    }
+                                    else if($entityUser->user_type_id == TYPE_USER_ADMIN_SCHOOL){
+                                        $entityUser->document_id = $this->findAndGenerateDocumentId();
+                                    }
+                                    else if($entityUser->user_type_id == TYPE_USER_ADMIN_CALL_CENTER){
+                                        $entityUser->document_id = $this->findAndGenerateDocumentId();
+                                    }else{
+                                        $messageError['code'] = 4;
+                                        $messageError['message'] = "User type: ".$typeUser." is invalid in line: ".$lineaFile;
+                                        $validate=false;
+                                        break;
                                     }
 
                                     $entityUser->first_name = $firstName;
                                     $entityUser->second_name = $middleName;
                                     $entityUser->first_last_name = $lastName;
-                                    $entityUser->birthdate = $birthdate;
 
+                                    //validado birthdate
+                                    $validateBirthdate = $this->validateDate($birthdate);
+
+                                      if($validateBirthdate){
+
+                                          $date = explode("/",$birthdate);
+                                          $m=$date[0];
+                                          $d=$date[1];
+                                          $y=$date[2];
+
+                                          $dateFinal = $d.'/'.$m.'/'.$y;
+                                          $entityUser->birthdate = $dateFinal;
+
+                                      }else{
+
+                                          $messageError['code'] = 5;
+                                          $messageError['message'] = "Birthdate user ".$birthdate." has an invalid format suggested is the mm/dd/yyyy in line:".$lineaFile;
+                                          $validate=false;
+                                          break;
+                                      }
 
                                     if (isset($phoneHome)) {
                                         $entityPhones = $phoneTable->newEntity();
@@ -197,29 +248,32 @@ class BulkController extends ReaxiumAPIController{
                                     $entityUser->user_photo = DEFAULT_URL_PHOTO_USER;
 
 
-                                    //address falta como obtener logitud latitud
-                                    if (isset($userAddress)) {
-
-                                        $entityAddress->address = $userAddress;
-                                        $arrayGeoData = $this->getLatitudeAndLongitude($userAddress);
-
-                                        if(isset($arrayGeoData)){
-                                            $entityAddress->latitude = $arrayGeoData['latitude'];
-                                            $entityAddress->longitude = $arrayGeoData['longitude'];
-                                        }else{
-                                            $entityAddress->latitude = '26.3645341';
-                                            $entityAddress->longitude = '-80.1329333';
-                                        }
-
-                                    }
+                                    //La direccion del usuario es fija ya que por el momento no se esta tomando en cuenta
+                                    //pero esta implementada.
+                                    $entityAddress->address = '6000 Glades Rd, Boca Raton, FL 33431, United States';
+                                    $entityAddress->latitude = '26.3645341';
+                                    $entityAddress->longitude = '-80.1329333';
 
                                     $entityUser->email = $emailUser;
 
                                     if($entityUser->user_type_id == TYPE_USER_STUDENT){
-                                        $validate = $this->createUser($usersTable, $entityUser, $phoneTable, $arrayPhone, $addressTable, $entityAddress,$userAccessTable);
+
+                                        $existDocumentId = $this->findByDocumentIdUser($entityUser->document_id);
+
+                                        if(isset($existDocumentId)){
+                                            Log::info("El Document ID: ".$entityUser->document_id." existe no sera registrado el usuario en sistema linea: ".$lineaFile);
+                                            $validate = true;
+                                        }else{
+                                            $validate = $this->createUser($usersTable, $entityUser, $phoneTable, $arrayPhone, $addressTable, $entityAddress,$userAccessTable);
+
+                                        }
                                     }
                                     else if($entityUser->user_type_id == TYPE_USER_STAKEHOLDER){
                                         $validate = $this->createStakeHolder($usersTable, $entityUser, $phoneTable, $arrayPhone, $addressTable, $entityAddress,$documentIdSForParents);
+                                    }
+                                    else{
+                                        //otro tipo de usuario
+                                        $validate = $this->createUser($usersTable, $entityUser, $phoneTable, $arrayPhone, $addressTable, $entityAddress,$userAccessTable);
                                     }
                                 }
                             }
@@ -232,7 +286,6 @@ class BulkController extends ReaxiumAPIController{
                                 Log::info($messageError['message']);
                                 $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
                                 $response['ReaxiumResponse']['message'] = $messageError['message'];
-
                             }
 
                         } else {
@@ -248,8 +301,29 @@ class BulkController extends ReaxiumAPIController{
                     $response = parent::setInvalidJsonMessage($response);
                 }
             } catch (\Exception $e) {
+
                 Log::info("Error getting the data of file .csv " . $e->getMessage());
-                $response = parent::setInternalServiceError($response);
+
+                if($e->getCode() == 90){
+                    $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                    $response['ReaxiumResponse']['message'] = $e->getMessage();
+                }
+                else if($e->getCode() == 91){
+                    $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                    $response['ReaxiumResponse']['message'] = $e->getMessage();
+                }
+                else if($e->getCode() == 93){
+                    $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                    $response['ReaxiumResponse']['message'] = $e->getMessage();
+                }
+                else if($e->getCode() == 94){
+                    $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                    $response['ReaxiumResponse']['message'] = $e->getMessage();
+                }
+                else{
+                    $response = parent::setInternalServiceError($response);
+                }
+
             }
 
         } else {
@@ -316,20 +390,20 @@ class BulkController extends ReaxiumAPIController{
                 if (isset($name_file)) {
 
                     if (file_exists($path)) {
-                        //Leer archivo ccv
-                        $csv = $this->readCSV($path, ';');
+                        //Leer archivo csv
+                        $csv = $this->readCSV($path,$name_file,REPORT_SCHOOL);
 
                         $businessTable = TableRegistry::get('Business');
                         $addressTable = TableRegistry::get("Address");
                         $phoneNumbersTable = TableRegistry::get("PhoneNumbers");
 
-                        $validate = true;
+                        $validate = false;
                         $contRegister = 0;
 
                         if (count($csv) > 0) {
 
                             //recorre cada row del arreglo csv
-                            for ($i = 1; $i < count($csv); $i++) {
+                            for ($i = 0; $i < count($csv); $i++) {
 
                                 $businessId = empty(trim($csv[$i][0])) ? null : trim($csv[$i][0]);
                                 $schoolType = empty(trim($csv[$i][1])) ? null : trim($csv[$i][1]);
@@ -360,8 +434,9 @@ class BulkController extends ReaxiumAPIController{
                                         $entityAddress->latitude = $arrayGeoData['latitude'];
                                         $entityAddress->longitude = $arrayGeoData['longitude'];
                                     }else{
-                                        $entityAddress->latitude = '25.77427';
-                                        $entityAddress->longitude = '-80.19366';
+                                        Log::info("No se pudo conseguir la latitud y logitud del business: ".$addressReal ."linea: ".$i);
+                                        $validate = false;
+                                        break;
                                     }
 
 
@@ -371,12 +446,22 @@ class BulkController extends ReaxiumAPIController{
                                     $entityBusiness->type_business = $schoolType;
                                     $entityBusiness->status_id = 1;
 
-                                    $validate = $this->createBusiness($businessTable,
-                                        $entityBusiness,
-                                        $phoneNumbersTable,
-                                        $entityPhone,
-                                        $addressTable,
-                                        $entityAddress);
+                                    //valido si el school ID existe
+                                    $existSchoolNumber = $this->findSchoolId($entityBusiness->business_id_number);
+
+                                    if(isset($existSchoolNumber)){
+                                        Log::info("El Business Id Number: ".$entityBusiness->business_id_number." existe no sera registrado el business en el sistema linea: ".$i);
+                                        $validate = true;
+                                    }
+                                    else{
+                                        $validate = $this->createBusiness($businessTable,
+                                            $entityBusiness,
+                                            $phoneNumbersTable,
+                                            $entityPhone,
+                                            $addressTable,
+                                            $entityAddress);
+                                    }
+
                                 }
                             }
 
@@ -402,7 +487,18 @@ class BulkController extends ReaxiumAPIController{
                 }
             } catch (\Exception $e) {
                 Log::info("Error getting the data of file .csv " . $e->getMessage());
-                $response = parent::setInternalServiceError($response);
+
+                if($e->getCode() == 90){
+                    $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                    $response['ReaxiumResponse']['message'] = $e->getMessage();
+                }
+                else if($e->getCode() == 91){
+                    $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                    $response['ReaxiumResponse']['message'] = $e->getMessage();
+                }
+                else{
+                    $response = parent::setInternalServiceError($response);
+                }
             }
 
         } else {
@@ -472,7 +568,7 @@ class BulkController extends ReaxiumAPIController{
                     if (file_exists($path)) {
 
                         //Leer archivo ccv
-                        $csv = $this->readCSV($path, ';');
+                        $csv = $this->readCSV($path,$name_file,REPORT_STOPS);
                         $stopsTable = TableRegistry::get('Stops');
 
                         $validate = true;
@@ -481,7 +577,7 @@ class BulkController extends ReaxiumAPIController{
                         if (count($csv) > 0) {
 
                             //recorre cada row del arreglo csv
-                            for ($i = 1; $i < count($csv); $i++) {
+                            for ($i = 0; $i < count($csv); $i++) {
 
                                 $stopNumber = empty(trim($csv[$i][0])) ? null : trim($csv[$i][0]);
                                 $stopName = empty(trim($csv[$i][1])) ? null : trim($csv[$i][1]);
@@ -502,12 +598,24 @@ class BulkController extends ReaxiumAPIController{
                                     if(isset($arrayGoe)){
                                         $entityStops->stop_latitude = $arrayGoe['latitude'];
                                         $entityStops->stop_longitude = $arrayGoe['longitude'];
-                                    }else{
-                                        $entityStops->stop_latitude = '25.77427';
-                                        $entityStops->stop_longitude = '-80.19366';
+
+                                        $existStopNumber = $this->findByStopsNumber($entityStops->stop_number);
+
+                                        if(isset($existStopNumber)){
+                                            Log::info("El Stop Number: ".$entityStops->stop_number." existe no sera registrado stop en el sistema liena: ".$i);
+                                            $validate = true;
+
+                                        }else{
+                                            $validate = $this->createStops($stopsTable,$entityStops);
+                                        }
+
+                                    }
+                                    else{
+                                        Log::info("No se pudo conseguir la latitud y logitud del stop address: ".$stopAddress);
+                                        $validate = false;
+                                        break;
                                     }
 
-                                    $validate = $this->createStops($stopsTable,$entityStops);
                                 }
                             }
 
@@ -535,7 +643,17 @@ class BulkController extends ReaxiumAPIController{
 
             }catch(\Exception $e){
                 Log::info("Error getting the data of file .csv " . $e->getMessage());
-                $response = parent::setInternalServiceError($response);
+                if($e->getCode() == 90){
+                    $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                    $response['ReaxiumResponse']['message'] = $e->getMessage();
+                }
+                else if($e->getCode() == 91){
+                    $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                    $response['ReaxiumResponse']['message'] = $e->getMessage();
+                }
+                else{
+                    $response = parent::setInternalServiceError($response);
+                }
             }
         }
         else{
@@ -642,8 +760,13 @@ class BulkController extends ReaxiumAPIController{
      * Metodo para crear relacion de usuario Stakeholder
      * @param $usersTable
      * @param $entityUser
-     * @param $userData
+     * @param $phoneTable
+     * @param $arrayPhone
+     * @param $addressTable
+     * @param $entityAddress
+     * @param $documentStudents
      * @return bool
+     * @throws \Exception
      */
     private function createStakeHolder($usersTable,$entityUser, $phoneTable, $arrayPhone, $addressTable, $entityAddress,$documentStudents){
 
@@ -659,15 +782,22 @@ class BulkController extends ReaxiumAPIController{
 
             // comprobando si existe los id de los studiantes
 
-            $userRelationShip = explode(",",$documentStudents);
+            $userRelationShip = array_filter(explode("|",$documentStudents));
+            Log::info("Documents Id Student size: ".count($userRelationShip));
             $userIdRelationParent = [];
+
+            if(strlen($documentStudents) == strlen($userRelationShip[0])){
+                Log::info("Separador de Document Id Student para relacionar con stakeHolder es incorrecto: ".$userRelationShip[0]);
+                throw new Exception("Student ID Document separator to relate to stakeholder is incorrect",93);
+            }
 
             foreach($userRelationShip as $documentId){
                 $userId = $this->findByDocumentIdUser($documentId);
                 if(isset($userId)){
                     array_push($userIdRelationParent,$userId);
                 }else{
-                    throw new Exception("Estudiante no registrado para completar la relacion: "."document ID: ".$documentId);
+                    Log::info("Estudiante con el DocumentId: " .$documentId. " no esta registrado para completar el proceso");
+                    throw new Exception("Student with the document: ".$documentId." is not registered to complete the process",94);
                 }
             }
 
@@ -733,6 +863,10 @@ class BulkController extends ReaxiumAPIController{
         }catch(\Exception $e){
             Log::info("Error creando el usuario stakeholder: " . $e->getMessage());
             $validate = false;
+
+            if($e->getCode()== 93 || $e->getCode()==94){
+                throw $e;
+            }
         }
 
         if($validate){
@@ -819,28 +953,123 @@ class BulkController extends ReaxiumAPIController{
     /**
      * Read csv File
      * @param $csvFile
+     * @param $name_file
+     * @param $typeDocument
      * @return array
+     * @throws \Exception
      */
-    private function readCSV($csvFile, $delimiter)
-    {
+    private function readCSV($csvFile,$name_file,$typeDocument){
 
-        $file_handle = fopen($csvFile, 'r');
+        try{
 
-        while (!feof($file_handle)) {
-            $line_of_text[] = fgetcsv($file_handle, 1024, $delimiter);
+            $delimiter = "";
+            $file_handle = fopen($csvFile, 'r');
+
+            // extrae cabecera del reporte
+            $headerCsv = fgets($file_handle);
+
+            Log::info('Tipo de Header:');
+            Log::info($headerCsv);
+
+            //validar el tipo de separador
+            $columnsHeader = explode(";",$headerCsv);
+
+            if(count($columnsHeader) > 1){
+                Log::info("column header size: ".count($columnsHeader) . " type delimiter = ';'");
+                $delimiter = ";";
+            }
+            else{
+                throw new \Exception('Csv file error processing incorrect Delimiter',90);
+            }
+
+            //validar cabecera y cantidad de columnas
+
+            $validateColumnAlfha = $this->validateHeader($columnsHeader);
+
+            if((count($columnsHeader) != MAX_COLUMN_CSV_USERS) && ($typeDocument == REPORT_USERS)){
+
+                throw new \Exception("Error wrong file format file ".$name_file.", please check to complete the process",91);
+            }
+            else if(!$validateColumnAlfha && $typeDocument == REPORT_USERS){
+
+                throw new \Exception("Error wrong file format file ".$name_file.", please check to complete the process",91);
+            }
+            else if(count($columnsHeader) != MAX_COLUMN_CSV_SCHOOL && $typeDocument == REPORT_SCHOOL){
+
+                throw new \Exception("Error wrong file format file ".$name_file.", please check to complete the process",91);
+            }
+            else if(!$validateColumnAlfha && $typeDocument == REPORT_SCHOOL){
+
+                throw new \Exception("Error wrong file format file ".$name_file.", please check to complete the process",91);
+            }
+            else if((count($columnsHeader) != MAX_COLUMN_CSV_STOPS) &&($typeDocument == REPORT_STOPS)){
+
+                throw new \Exception("Error wrong file format file ".$name_file.", please check to complete the process",91);
+            }
+            else if(!$validateColumnAlfha && $typeDocument == REPORT_STOPS){
+
+                throw new \Exception("Error wrong file format file ".$name_file.", please check to complete the process",91);
+            }
+
+            // se extraelas demas lineas del documento  y se guarda en un arreglo
+            while (!feof($file_handle)) {
+                $line_of_text[] = fgetcsv($file_handle, 1024, $delimiter);
+            }
+
+        }
+        catch (\Exception $e){
+            Log::info("Error leyendo archivo csv: ".$e->getMessage());
+
+            if($e->getCode() == 90 || $e->getCode() == 91){
+                throw $e;
+            }
+
+        }finally{
+            fclose($file_handle);
         }
 
-        fclose($file_handle);
-
         return $line_of_text;
+    }
+
+
+    private function validateHeader($header){
+
+        $validate = true;
+
+        foreach($header as $column){
+            if((!preg_match('/^[A-z]+$/',trim(str_replace(" ","",$column))))){
+                Log::info("No es un nombre de columna valido: ".trim(str_replace(" ","",$column)));
+                $validate = false;
+                break;
+            }
+        }
+
+        return $validate;
+    }
+
+    private function validateDate($str){
+
+        $validate = true;
+        //validar formato de fecha
+        if((!preg_match('/^(0[1-9]|1[0-2])\/(0[1-9]|[1-2][0-9]|3[0-1])\/[0-9]{4}$/',$str))){
+            $validate = false;
+            Log::info("No es valido: ".$str);
+        }
+
+
+        return $validate;
+    }
+
+    private function cleanText($str){
+        $cleanTxt = preg_replace('([^A-Za-z0-9])', '', $str);
+        return $cleanTxt;
     }
 
     /**
      * @param $nameUser
      * @return int
      */
-    private function findTypeUserId($nameUser)
-    {
+    private function findTypeUserId($nameUser){
 
         $userTypeTable = TableRegistry::get("UserType");
         $userTypeFound = $userTypeTable->findByUserTypeName(strtolower($nameUser));
@@ -860,8 +1089,7 @@ class BulkController extends ReaxiumAPIController{
      * @param $idNumberSchool
      * @return int
      */
-    private function findSchoolId($idNumberSchool)
-    {
+    private function findSchoolId($idNumberSchool){
 
         $businessTable = TableRegistry::get("Business");
         $businessFound = $businessTable->findByBusinessIdNumber($idNumberSchool);
@@ -903,7 +1131,7 @@ class BulkController extends ReaxiumAPIController{
                     $longitude = $geo['results'][0]['geometry']['location']['lng'];
                     $latitudeAndLongitude = array('latitude' => $latitude, 'longitude' => $longitude);
                 }else{
-                    Log::info("No se pudo obtener longitud y latitude");
+                    Log::info("No se pudo obtener longitud y latitude de la siguiente direccion: ".$address);
                     $latitudeAndLongitude = null;
                 }
             }
@@ -952,6 +1180,21 @@ class BulkController extends ReaxiumAPIController{
         }
 
         return $userId;
+    }
+
+
+    private function findByStopsNumber($numberStop){
+
+        $stopId = null;
+        $stopTable = TableRegistry::get("Stops");
+        $stopData = $stopTable->findByStopNumber($numberStop);
+
+        if($stopData->count()>0){
+            $stopData = $stopData->toArray();
+            $stopId = $stopData[0]['stop_number'];
+        }
+
+        return $stopId;
     }
 
 }
