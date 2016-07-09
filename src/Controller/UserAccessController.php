@@ -300,7 +300,7 @@ class UserAccessController extends ReaxiumAPIController
             }
             Log::info("stakeholder selected");
             Log::info(json_encode($stakeholderIdArray));
-            $iosAndroidTokens = $stakeholderTable->find('all', array('fields' => array('android_id', 'ios_id'), 'conditions' => array('stakeholder_id' => $stakeholderIdArray[0], 'status_id' => '1')));
+            $iosAndroidTokens = $stakeholderTable->find('all', array('fields' => array('android_id', 'ios_id'), 'conditions' => array('stakeholder_id IN' => $stakeholderIdArray, 'status_id' => '1')));
             Log::info($iosAndroidTokens);
             if ($iosAndroidTokens->count() > 0) {
                 $iosAndroidTokens = $iosAndroidTokens->toArray();

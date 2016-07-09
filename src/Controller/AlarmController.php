@@ -43,7 +43,7 @@ class AlarmController extends ReaxiumAPIController
                 $alarmMessage = 'The Driver @DriverName@ fire a Accident Alarm from the Reaxium Device ID @device_id@';
                 break;
             case NEXT_STOP_AWARE:
-                $alarmMessage = 'Your stop is the next!';
+                $alarmMessage = 'Attention, the bus is coming to your stop';
                 break;
         }
         return $alarmMessage;

@@ -68,7 +68,7 @@ class IOSPushController extends AppController
     {
         $body['aps'] = array(
             'alert' => $message['traffic_info'],
-            'sound' => 'default',
+            'sound' => 'sound.caf',
             'custom' => $message
         );
         return json_encode($body);
