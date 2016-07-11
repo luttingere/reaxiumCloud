@@ -1225,7 +1225,7 @@ class BulkController extends ReaxiumAPIController
             fclose($file_handle);
         }
 
-        return $line_of_text;
+        return array_filter($line_of_text);
     }
 
 
