@@ -870,7 +870,8 @@ class UsersController extends ReaxiumAPIController
                         $whereCondition = array(array('OR' => array(
                             array('first_name LIKE' => '%' . $filter . '%'),
                             array('first_last_name LIKE' => '%' . $filter . '%'),
-                            array('document_id LIKE' => '%' . $filter . '%')
+                            array('document_id LIKE' => '%' . $filter . '%'),
+                            array('UserType.user_type_name LIKE' => '%' . $filter . '%'),
                         )));
                         $userFound = $userTable->find()
                             ->where($whereCondition)
