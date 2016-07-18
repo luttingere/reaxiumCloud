@@ -11,6 +11,7 @@ namespace App\Controller;
 use Cake\Log\Log;
 use Cake\ORM\TableRegistry;
 use App\Util\ReaxiumApiMessages;
+use Psy\Util\Json;
 
 class BusinessController extends ReaxiumAPIController
 {
@@ -280,8 +281,8 @@ class BusinessController extends ReaxiumAPIController
      *          }
      *      }
      */
-    public function allBusiness()
-    {
+    public function allBusiness(){
+
         Log::info("All business registered service invoked");
         parent::setResultAsAJson();
         $response = parent::getDefaultReaxiumMessage();
@@ -328,6 +329,180 @@ class BusinessController extends ReaxiumAPIController
     }
 
 
+    public function getAllBusinessByType(){
+
+        Log::info("All business registered service invoked");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+
+        if(parent::validReaxiumJsonHeader($jsonObject)){
+
+            try{
+
+                $typeBusiness = !isset($jsonObject['ReaxiumParameters']['Business']['business_type_id']) ? null :$jsonObject['ReaxiumParameters']['Business']['business_type_id'];
+
+                if(isset($typeBusiness)){
+
+                    $businessTable = TableRegistry::get("Business");
+                    $businessData = $businessTable->findByBusinessTypeId($typeBusiness)
+                        ->where(array("Business.status_id"=>1))
+                        ->contain(array('BusinessType'));
+
+                    if($businessData->count()>0){
+                        $response['ReaxiumResponse']['object'] = $businessData;
+                        $response = parent::setSuccessfulResponse($response);
+                    }else{
+                        $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                        $response['ReaxiumResponse']['message'] = 'No Business found';
+                    }
+
+                }else{
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+            }
+            catch (\Exception $e){
+                Log::info("Error getting all business information " . $e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+
+        }else{
+            $response = parent::seInvalidParametersMessage($response);
+        }
+
+        Log::info("Responde Object: " . json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
+
+
+    public function getRoutesByBusiness(){
+
+        Log::info("All routes registered by business service invoked");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+        $jsonObject = parent::getJsonReceived();
+
+        if (parent::validReaxiumJsonHeader($jsonObject)) {
+
+            try{
+
+                if(isset($jsonObject['ReaxiumParameters']["page"])){
+
+                    $page = $jsonObject['ReaxiumParameters']["page"];
+                    $sortedBy = !isset($jsonObject['ReaxiumParameters']["sortedBy"]) ? 'first_last_name' : $jsonObject['ReaxiumParameters']["sortedBy"];
+                    $sortDir = !isset($jsonObject['ReaxiumParameters']["sortDir"]) ? 'desc' : $jsonObject['ReaxiumParameters']["sortDir"];
+                    $filter = !isset($jsonObject['ReaxiumParameters']["filter"]) ? '' : $jsonObject['ReaxiumParameters']["filter"];
+                    $limit = !isset($jsonObject['ReaxiumParameters']["limit"]) ? 10 : $jsonObject['ReaxiumParameters']["limit"];
+                    $business_id = !isset($jsonObject['ReaxiumParameters']["business_id"]) ? 10 : $jsonObject['ReaxiumParameters']["business_id"];
+
+                    // busco las rutas relacionadas con el business
+                    $businessObject = $this->lookUpAllRoutesByBusiness($filter, $sortedBy, $sortDir,$business_id);
+
+                    $count = $businessObject->count();
+                    $this->paginate = array('limit' => $limit, 'page' => $page);
+                    $routesBusinessFound = $this->paginate($businessObject);
+
+                    if ($routesBusinessFound->count() > 0) {
+
+                        $routesBusinessFound = $routesBusinessFound->toArray();
+                        $arrayRoutes = [];
+                        // busco las paradas relacionadas con esas rutas
+                        foreach($routesBusinessFound as $route){
+                            Log::info("Routes id: ".$route['id_route']);
+                            $stops = $this->getStopsByRoutesBusiness($route['id_route']);
+                            array_push($arrayRoutes,$stops);
+                        }
+
+                        $maxPages = floor((($count - 1) / $limit) + 1);
+                        $response['ReaxiumResponse']['totalRecords'] = $count;
+                        $response['ReaxiumResponse']['totalPages'] = $maxPages;
+                        $response['ReaxiumResponse']['object'] = $arrayRoutes;
+                        $response = parent::setSuccessfulResponse($response);
+                    }
+                    else {
+                        $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                        $response['ReaxiumResponse']['message'] = 'There are no routes related to this business';
+                    }
+                }else{
+                    $response = parent::seInvalidParametersMessage($response);
+                }
+
+            }catch(\Exception $e){
+                Log::info("Error getting all business information " . $e->getMessage());
+                $response = parent::setInternalServiceError($response);
+            }
+        }
+        else{
+            $response = parent::setInvalidJsonMessage($response);
+        }
+        Log::info("Responde Object: " . json_encode($response));
+        $this->response->body(json_encode($response));
+    }
+
+    /**
+     * @param $filter
+     * @param $sortedBy
+     * @param $sortDir
+     * @param $businessId
+     * @return mixed
+     */
+    private function lookUpAllRoutesByBusiness($filter, $sortedBy, $sortDir,$businessId){
+
+        $businessRouteTable = TableRegistry::get('BusinessRoutes');
+
+        if (trim($filter) != "") {
+
+            $whereCondition = array(array('OR' => array(
+                array('Routes.route_number LIKE' => '%' . $filter . '%'),
+                array('Routes.route_name LIKE' => '%' . $filter . '%'))));
+
+            $businessRouteFound = $businessRouteTable->findByBusinessId($businessId)
+                ->where($whereCondition)
+                ->andWhere(array('Routes.status_id' => 1))
+                ->contain(array('Routes'))
+                ->order(array($sortedBy . ' ' . $sortDir));
+        } else {
+            $businessRouteFound = $businessRouteTable->findByBusinessId($businessId)
+                ->where(array('Routes.status_id' => 1))
+                ->contain(array('Routes'))
+                ->order(array($sortedBy . ' ' . $sortDir));
+        }
+
+        return $businessRouteFound;
+    }
+
+    /**
+     * @param $id_route
+     * @return \Cake\Datasource\EntityInterface|\Cake\ORM\Entity|null
+     */
+    private function getStopsByRoutesBusiness($id_route){
+
+        $routeFound = TableRegistry::get("Routes");
+        $entityRoutes = $routeFound->newEntity();
+
+        $stopsByRoutes = $routeFound->findByIdRoute($id_route)->where(array('Routes.status_id' => 1))->contain(array('Stops'));
+
+        if($stopsByRoutes->count()>0){
+
+            $stopsByRoutes = $stopsByRoutes->toArray();
+
+            foreach($stopsByRoutes as $routes){
+                $entityRoutes->id_route = $routes['id_route'];
+                $entityRoutes->route_number = $routes['route_number'];
+                $entityRoutes->route_name = $routes['route_name'];
+                $entityRoutes->route_address = $routes['route_address'];
+                $entityRoutes->route_type = $routes['route_type'];
+                $entityRoutes->stops = $routes['stops'];
+            }
+
+        }else{
+            $entityRoutes = null;
+        }
+
+        return $entityRoutes;
+    }
+
     /**
      * obtain all business registered in the reaxium cloud
      * @param $filter
@@ -342,19 +517,20 @@ class BusinessController extends ReaxiumAPIController
         if (isset($filter) && trim($filter) != '') {
             $whereCondition = array(array('OR' => array(
                 array('business_name LIKE' => '%' . $filter . '%'),
-                array('business_id_number LIKE' => '%' . $filter . '%')
+                array('business_id_number LIKE' => '%' . $filter . '%'),
+                array('BusinessType.business_type_name LIKE' => '%' . $filter . '%'),
             )), array('OR'=>array(
                 array('Business.status_id' => '1'),
                 array('Business.status_id' => '2'),
             )));
-            $AllBusinessObject = $businessTable->find()->where($whereCondition)->order(array($sortedBy . ' ' . $sortDir))->contain(array('Status'));
+            $AllBusinessObject = $businessTable->find()->where($whereCondition)->order(array($sortedBy . ' ' . $sortDir))->contain(array('Status','BusinessType'));
         } else {
             $whereCondition = array(
                 'OR'=>array(
                     array('Business.status_id' => '1'),
                     array('Business.status_id' => '2')
                 ));
-            $AllBusinessObject = $businessTable->find()->where($whereCondition)->order(array($sortedBy . ' ' . $sortDir))->contain(array('Status'));
+            $AllBusinessObject = $businessTable->find()->where($whereCondition)->order(array($sortedBy . ' ' . $sortDir))->contain(array('Status','BusinessType'));
         }
         return $AllBusinessObject;
     }
@@ -599,7 +775,10 @@ class BusinessController extends ReaxiumAPIController
                 array('Business.status_id' => '1'),
                 array('Business.status_id' => '2')))
             );
-        $businessObject = $businessTable->find()->where($whereCondition)->contain(array('Status', 'Address', 'PhoneNumbers'));
+        $businessObject = $businessTable->find()
+            ->where($whereCondition)
+            ->contain(array('Status', 'Address', 'PhoneNumbers','Routes'));
+
         if ($businessObject->count() > 0) {
             $businessObject = $businessObject->toArray();
         } else {
@@ -700,5 +879,35 @@ class BusinessController extends ReaxiumAPIController
         $businessTable->updateAll(array('status_id' => '3'), array('business_id' => $businessId));
     }
 
+
+    public function getTypeBusiness(){
+
+        Log::info("delete a business service invoked");
+        parent::setResultAsAJson();
+        $response = parent::getDefaultReaxiumMessage();
+
+        try{
+            $businessType = TableRegistry::get('BusinessType');
+            $businessFound = $businessType->find();
+
+            if($businessFound->count() > 0){
+
+                $businessFound = $businessFound->toArray();
+                $response['ReaxiumResponse']['object'] = $businessFound;
+                $response = parent::setSuccessfulResponse($response);
+
+            }else{
+                $response['ReaxiumResponse']['code'] = ReaxiumApiMessages::$NOT_FOUND_CODE;
+                $response['ReaxiumResponse']['message'] = 'No BusinessType found';
+            }
+        }
+        catch (\Exception $e){
+            Log::info("Error getting the user " . $e->getMessage());
+            $response = parent::setInternalServiceError($response);
+        }
+
+        Log::info("Responde Object: " . json_encode($response));
+        $this->response->body(json_encode($response));
+    }
 
 }

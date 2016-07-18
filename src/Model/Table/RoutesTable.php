@@ -16,10 +16,16 @@ class RoutesTable extends Table{
         parent::initialize($config);
         $this->table('routes');
         $this->primaryKey('id_route');
+
         $this->belongsToMany('Stops',
             array('targetForeignKey' => 'id_stop',
                 'foreignKey' => 'id_route',
                 'joinTable' => 'routesStopsRelationship'));
+
+        $this->belongsToMany('Business',
+            array('targetForeignKey' => 'business_id',
+                'foreignKey' => 'id_route',
+                'joinTable' => 'business_routes'));
 
     }
 
