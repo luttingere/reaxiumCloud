@@ -331,7 +331,7 @@ class BusinessController extends ReaxiumAPIController
 
     public function getAllBusinessByType(){
 
-        Log::info("All business registered service invoked");
+        Log::info("All business registered service invokedd");
         parent::setResultAsAJson();
         $response = parent::getDefaultReaxiumMessage();
         $jsonObject = parent::getJsonReceived();
